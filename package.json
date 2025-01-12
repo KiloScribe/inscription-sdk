@@ -1,0 +1,70 @@
+{
+  "name": "@kiloscribe/inscription-sdk",
+  "version": "1.0.12",
+  "description": "SDK for inscribing files on Hedera",
+  "type": "module",
+  "files": [
+    "dist"
+  ],
+  "main": "./dist/umd/inscription-sdk.umd.js",
+  "module": "./dist/es/inscription-sdk.es.js",
+  "types": "./dist/es/index.d.ts",
+  "exports": {
+    ".": {
+      "import": {
+        "types": "./dist/es/index.d.ts",
+        "default": "./dist/es/inscription-sdk.es.js"
+      },
+      "require": {
+        "types": "./dist/umd/index.d.ts",
+        "default": "./dist/umd/inscription-sdk.umd.js"
+      }
+    }
+  },
+  "scripts": {
+    "clean": "rimraf dist",
+    "build:es": "BUILD_FORMAT=es vite build",
+    "build:umd": "BUILD_FORMAT=umd vite build",
+    "build": "npm run clean && npm run build:umd && npm run build:es",
+    "preview": "vite preview",
+    "example:file": "tsx examples/inscribe-file.ts",
+    "example:url": "tsx examples/inscribe-url.ts",
+    "example:hashinal": "tsx examples/inscribe-hashinal.ts"
+  },
+  "keywords": [
+    "hedera",
+    "hashgraph",
+    "inscription",
+    "nft",
+    "blockchain",
+    "kiloscribe"
+  ],
+  "author": "Kiloscribe",
+  "license": "MIT",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/kiloscribe/inscription-sdk.git"
+  },
+  "bugs": {
+    "url": "https://github.com/kiloscribe/inscription-sdk/issues"
+  },
+  "homepage": "https://github.com/kiloscribe/inscription-sdk#readme",
+  "dependencies": {
+    "@hashgraph/sdk": "^2.56.0",
+    "axios": "^1.6.5"
+  },
+  "devDependencies": {
+    "@kiloscribe/inscription-sdk": "1.0.11",
+    "dotenv": "^16.4.5",
+    "rimraf": "^5.0.0",
+    "terser": "^5.37.0",
+    "tsx": "^4.19.2",
+    "typescript": "~5.6.2",
+    "vite": "^5",
+    "vite-plugin-dts": "^3.9.1",
+    "vite-plugin-node-polyfills": "^0.22.0"
+  },
+  "publishConfig": {
+    "access": "public"
+  }
+}
