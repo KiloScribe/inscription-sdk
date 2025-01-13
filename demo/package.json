@@ -1,0 +1,20 @@
+{
+  "name": "inscription-sdk-demo",
+  "private": true,
+  "version": "0.0.0",
+  "type": "module",
+  "scripts": {
+    "dev": "vite",
+    "build": "tsc && vite build",
+    "preview": "vite preview"
+  },
+  "dependencies": {
+    "@hashgraphonline/hashinal-wc": "1.0.92",
+    "@kiloscribe/inscription-sdk": "file:.."
+  },
+  "devDependencies": {
+    "typescript": "~5.6.2",
+    "vite": "^5.0.0",
+    "vite-plugin-node-polyfills": "^0.22.0"
+  }
+}

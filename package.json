@@ -29,7 +29,10 @@
     "preview": "vite preview",
     "example:file": "tsx examples/inscribe-file.ts",
     "example:url": "tsx examples/inscribe-url.ts",
-    "example:hashinal": "tsx examples/inscribe-hashinal.ts"
+    "example:hashinal": "tsx examples/inscribe-hashinal.ts",
+    "demo:dev": "vite -c demo/vite.config.ts",
+    "demo:build": "vite build -c demo/vite.config.ts",
+    "demo:preview": "vite preview -c demo/vite.config.ts"
   },
   "keywords": [
     "hedera",
@@ -51,6 +54,7 @@
   "homepage": "https://github.com/kiloscribe/inscription-sdk#readme",
   "dependencies": {
     "@hashgraph/sdk": "^2.56.0",
+    "@hashgraph/hedera-wallet-connect": "^1.4.2",
     "axios": "^1.6.5"
   },
   "devDependencies": {

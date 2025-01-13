@@ -1,0 +1,22 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Inscription SDK Demo</title>
+    <link rel="stylesheet" href="/style.css">
+</head>
+<body>
+    <div class="container">
+        <h1>Inscription SDK Demo</h1>
+        <div class="upload-section">
+            <input type="file" id="fileInput" accept="image/*">
+            <button id="connectButton">Connect Wallet</button>
+            <button id="inscribeButton" disabled>Inscribe</button>
+        </div>
+        <div id="status" class="status"></div>
+        <div id="preview" class="preview"></div>
+    </div>
+    <script type="module" src="/main.ts"></script>
+</body>
+</html>

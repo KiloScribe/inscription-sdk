@@ -11,6 +11,7 @@ import {
   HederaClientConfig,
   InscriptionResult,
 } from './types';
+import { DAppSigner } from '@hashgraph/hedera-wallet-connect';
 
 export class InscriptionSDK {
   private readonly client: AxiosInstance;
@@ -286,6 +287,43 @@ export class InscriptionSDK {
   }
 
   /**
+   * Executes a transaction with the provided transaction bytes using a Signer,
+   * typically called after inscribing a file through `startInscription`.
+   * @param transactionBytes - The bytes of the transaction to execute.
+   * @param clientConfig - The configuration for the Hedera client.
+   * @returns The transaction receipt.
+   * @throws ValidationError if the transaction bytes are invalid.
+   * @throws Error if the execution fails.
+   */
+  async executeTransactionWithSigner(
+    transactionBytes: string,
+    signer: DAppSigner
+  ): Promise<string> {
+    try {
+      const transaction = Transaction.fromBytes(
+        Buffer.from(transactionBytes, 'base64')
+      );
+
+      const signedTransaction = await transaction.signWithSigner(signer);
+      const executeTx = await signedTransaction.executeWithSigner(signer);
+      const receipt = await executeTx.getReceiptWithSigner(signer);
+      const status = receipt.status.toString();
+
+      if (status !== 'SUCCESS') {
+        throw new Error(`Transaction failed with status: ${status}`);
+      }
+
+      return executeTx.transactionId.toString();
+    } catch (error) {
+      throw new Error(
+        `Failed to execute transaction: ${
+          error instanceof Error ? error.message : 'Unknown error'
+        }`
+      );
+    }
+  }
+
+  /**
    * Inscribes a file and executes the transaction. Note that base64 files are limited to 2MB, while URL files are limited to 100MB.
    * @param request - The request object containing the file to inscribe and the client configuration
    * @param clientConfig - The configuration for the Hedera network and account
@@ -320,6 +358,40 @@ export class InscriptionSDK {
   }
 
   /**
+   * Inscribes a file and executes the transaction. Note that base64 files are limited to 2MB, while URL files are limited to 100MB.
+   * @param request - The request object containing the file to inscribe and the client configuration
+   * @param clientConfig - The configuration for the Hedera network and account
+   * @returns The transaction ID of the executed transaction
+   * @throws ValidationError if the request is invalid
+   * @throws Error if the transaction execution fails
+   */
+  async inscribe(
+    request: StartInscriptionRequest,
+    signer: DAppSigner
+  ): Promise<InscriptionResult> {
+    const inscriptionResponse = await this.startInscription(request);
+
+    if (!inscriptionResponse.transactionBytes) {
+      this.logger.error(
+        'No transaction bytes returned from inscription request',
+        inscriptionResponse
+      );
+      throw new Error('No transaction bytes returned from inscription request');
+    }
+
+    this.logger.info('executing transaction');
+    const transactionId = await this.executeTransactionWithSigner(
+      inscriptionResponse.transactionBytes,
+      signer
+    );
+
+    return {
+      jobId: inscriptionResponse.tx_id,
+      transactionId,
+    };
+  }
+
+  /**
    * Retrieves an inscription by its transaction id. Call this function on an interval
    * so you can retrieve the status. Store the transaction id in your database if you
    * need to reference it later on
@@ -329,16 +401,13 @@ export class InscriptionSDK {
    * @throws Error if the retrieval fails
    */
   async retrieveInscription(txId: string): Promise<ImageJobResponse> {
-    if (!id) {
+    if (!txId) {
       throw new ValidationError('Inscription ID is required');
     }
 
     try {
       const response = await this.client.get(
-        `/inscriptions/retrieve-inscription`,
-        {
-          params: { id },
-        }
+        `/inscriptions/retrieve-inscription/${txId}`
       );
       return response.data;
     } catch (error) {
