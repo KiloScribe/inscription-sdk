@@ -501,6 +501,11 @@ const result = await sdk.inscribeAndExecute(
 Upload any supported file type:
 
 ```typescript
+// retrieve dAppConnector from hedera-wallet-connect
+
+const dAppSigner = dAppConnector.signers.find((signer) => {
+  return signer.getAccountId().toString() === accountId;
+});
 const result = await sdk.inscribe(
   {
     file: {
@@ -523,35 +528,59 @@ const result = await sdk.inscribe(
 Create an NFT with metadata:
 
 ```typescript
-const result = await sdk.inscribe(
-  {
-    file: {
-      type: 'base64',
-      base64: 'your_base64_data',
-      fileName: 'example.png',
-      mimeType: 'image/png',
-    },
-    holderId: accountId,
-    mode: 'hashinal',
-    network: 'testnet',
-    description: 'My first NFT',
-    metadataObject: {
-      name: 'Cool NFT',
-      description: 'An awesome NFT on Hedera',
-      attributes: [
-        {
-          trait_type: 'Background',
-          value: 'Blue',
+async function inscribeHashinal() {
+  const sdk = new InscriptionSDK({
+     apiKey: process.env.KILOSCRIBE_API_KEY,
+     network: 'testnet',
+  });
+
+  const imagePath = join(__dirname, 'assets', 'example.webp');
+  const imageBuffer = readFileSync(imagePath);
+  const base64Image = imageBuffer.toString('base64');
+
+  try {
+    const result = await sdk.inscribeAndExecute(
+      {
+        file: {
+          type: 'base64',
+          base64: base64Image,
+          fileName: 'example.webp',
+          mimeType: 'image/webp',
         },
-        {
-          trait_type: 'Rarity',
-          value: 'Legendary',
+        holderId: '0.0.123456',
+        mode: 'hashinal',
+        network: 'testnet',
+        description: 'Example hashinal inscription',
+        metadataObject: {
+          name: 'Example NFT',
+          description: 'This is an example NFT',
+          attributes: [
+            {
+              trait_type: 'Example Trait',
+              value: 'Example Value',
+            },
+          ],
         },
-      ],
-    },
-  },
-  dAppSigner
-);
+      },
+      {
+        accountId: '0.0.123456',
+        privateKey: process.env.HEDERA_ACCOUNT_PRIVATE_KEY!,
+        network: 'testnet',
+      }
+    );
+
+    console.log('Inscription completed:', result);
+
+    // You can also retrieve the inscription status
+    const status = await sdk.retrieveInscription(result.jobId);
+    console.log('Inscription status:', status);
+  } catch (error) {
+    console.error('Error:', error instanceof Error ? error.message : error);
+  }
+}
+
+// Run the example
+inscribeHashinal().catch(console.error);
 ```
 
 ### 3. URL Inscription
