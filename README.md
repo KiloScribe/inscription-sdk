@@ -66,7 +66,7 @@ npm install @kiloscribe/inscription-sdk @hashgraphonline/hashinal-wc @hashgraph/
 
 ## Getting Started
 
-**Topic Id** : **0.0.8084856** 
+**Topic Id** : **0.0.8084856**
 
 ### 1. Set Up Your Environment
 
@@ -317,8 +317,7 @@ Load the SDK directly from the Hedera network using HCS-3 recursion:
 
             // Initialize inscription SDK
             inscriptionSDK = new window.InscriptionSDK({
-              apiKey:
-                'U2FsdGVkX1+tdUXOAXxJml1OLCGFWHVjgej4/pVHEpeL4FSm6MTRqnYNZwrFCYnJ24j+Ese9gcgoRtAI3qC8mA==', // Get from Kiloscribe Dashboard
+              apiKey: 'YOUR_API_KEY', // Get from Kiloscribe Dashboard
               network: 'testnet',
             });
           } else {
@@ -530,8 +529,8 @@ Create an NFT with metadata:
 ```typescript
 async function inscribeHashinal() {
   const sdk = new InscriptionSDK({
-     apiKey: process.env.KILOSCRIBE_API_KEY,
-     network: 'testnet',
+    apiKey: process.env.KILOSCRIBE_API_KEY,
+    network: 'testnet',
   });
 
   const imagePath = join(__dirname, 'assets', 'example.webp');
