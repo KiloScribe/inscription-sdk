@@ -2,21 +2,46 @@
 
 TypeScript/JavaScript SDK for inscribing files on the Hedera network using Kiloscribe's inscription service.
 
+## Table of Contents
+
+- [Prerequisites](#prerequisites)
+- [Installation](#installation)
+- [Getting Started](#getting-started)
+  - [A. Browser Apps with WalletConnect (Recommended)](#a-browser-apps-with-walletconnect-recommended)
+  - [B. Loading via HCS-3 Recursion](#b-loading-via-hcs-3-recursion)
+  - [C. Node.js Apps with Private Key](#c-nodejs-apps-with-private-key)
+- [Creating Different Types of Inscriptions](#creating-different-types-of-inscriptions)
+  - [1. Basic File Inscription](#1-basic-file-inscription)
+  - [2. Hashinal NFT](#2-hashinal-nft)
+  - [3. URL Inscription](#3-url-inscription)
+- [Querying Inscriptions](#querying-inscriptions)
+  - [Get Inscriptions](#get-inscriptions)
+- [Examples](#examples)
+  - [Vanilla JavaScript Demo](#vanilla-javascript-demo)
+  - [Try the Interactive Demo](#try-the-interactive-demo)
+- [File Support](#file-support)
+- [Common Issues](#common-issues)
+- [Error Handling](#error-handling)
+- [Support](#support)
+
 ## Prerequisites
 
 Before you start, you'll need:
 
 1. **Hedera Account**:
+
    - Create a testnet account at [portal.hedera.com](https://portal.hedera.com)
    - Save your Account ID (e.g., `0.0.123456`)
    - Save your Private Key (DER Encoded)
 
 2. **WalletConnect Project** (for browser apps):
+
    - Create an account at [cloud.walletconnect.com](https://cloud.walletconnect.com)
    - Create a new project
    - Save your Project ID
 
 3. **Kiloscribe API Key**:
+
    - Get your API key from [kiloscribe.com/inscription-api](https://kiloscribe.com/inscription-api)
 
 4. **Development Environment**:
@@ -26,18 +51,22 @@ Before you start, you'll need:
 ## Installation
 
 ### For Node.js/Backend Projects
+
 ```bash
 # Install the SDK and its peer dependencies
 npm install @kiloscribe/inscription-sdk @hashgraph/sdk
 ```
 
 ### For Browser/Frontend Projects
+
 ```bash
 # Install the SDK and wallet connection dependencies
 npm install @kiloscribe/inscription-sdk @hashgraphonline/hashinal-wc @hashgraph/sdk @hashgraph/hedera-wallet-connect
 ```
 
 ## Getting Started
+
+**Topic Id** : **0.0.8084856** 
 
 ### 1. Set Up Your Environment
 
@@ -63,11 +92,13 @@ WALLETCONNECT_PROJECT_ID=your_project_id
 This method lets users connect their existing Hedera wallet (like HashPack):
 
 1. Install dependencies:
+
 ```bash
 npm install @kiloscribe/inscription-sdk @hashgraphonline/hashinal-wc @hashgraph/sdk
 ```
 
 2. Create your app:
+
 ```typescript
 import { HashinalsWalletConnectSDK } from '@hashgraphonline/hashinal-wc';
 import { InscriptionSDK } from '@kiloscribe/inscription-sdk';
@@ -107,7 +138,7 @@ const result = await sdk.inscribe(
       mimeType: 'image/png',
     },
     holderId: accountId,
-    mode: 'file',  // or 'hashinal' for NFTs
+    mode: 'file', // or 'hashinal' for NFTs
     network: 'testnet',
     description: 'Example inscription',
   },
@@ -119,16 +150,315 @@ const status = await sdk.retrieveInscription(result.jobId);
 console.log('Status:', status.status);
 ```
 
-#### B. Node.js Apps with Private Key
+## B. Loading via HCS-3 Recursion
+
+Load the SDK directly from the Hedera network using HCS-3 recursion:
+
+```html
+<!DOCTYPE html>
+<html>
+  <head>
+    <title>Inscription SDK Demo</title>
+
+    <script
+      data-hcs-config
+      data-hcs-cdn-url="https://kiloscribe.com/api/inscription-cdn/"
+      data-hcs-network="mainnet"
+      data-hcs-debug="true"
+      data-hcs-retry-attempts="5"
+      data-hcs-retry-backoff="500"
+    ></script>
+
+    <script
+      data-src="hcs://1/0.0.8084872"
+      data-script-id="wallet-connect"
+      data-load-order="1"
+    ></script>
+
+    <script
+      data-src="hcs://1/0.0.8084856"
+      data-script-id="inscription-sdk"
+      data-load-order="2"
+    ></script>
+
+    <style>
+      body {
+        font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto,
+          Oxygen, Ubuntu, Cantarell, 'Open Sans', 'Helvetica Neue', sans-serif;
+        margin: 0;
+        padding: 20px;
+        background: #f5f5f5;
+      }
+
+      .container {
+        max-width: 800px;
+        margin: 0 auto;
+        background: white;
+        padding: 20px;
+        border-radius: 8px;
+        box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+        margin-bottom: 10px;
+        margin-top: 10px;
+      }
+
+      h1 {
+        color: #333;
+        text-align: center;
+      }
+
+      .upload-section {
+        display: flex;
+        gap: 10px;
+        margin: 20px 0;
+      }
+
+      button {
+        background: #2563eb;
+        color: white;
+        border: none;
+        padding: 10px 20px;
+        border-radius: 4px;
+        cursor: pointer;
+        font-weight: 500;
+      }
+
+      button:disabled {
+        background: #94a3b8;
+        cursor: not-allowed;
+      }
+
+      button:hover:not(:disabled) {
+        background: #1d4ed8;
+      }
+
+      .status {
+        margin: 20px 0;
+        padding: 10px;
+        border-radius: 4px;
+      }
+
+      .status.error {
+        background: #fee2e2;
+        color: #b91c1c;
+      }
+
+      .status.success {
+        background: #dcfce7;
+        color: #15803d;
+      }
+
+      .preview {
+        margin: 20px 0;
+        text-align: center;
+      }
+
+      .preview img {
+        max-width: 100%;
+        max-height: 400px;
+        border-radius: 4px;
+      }
+    </style>
+  </head>
+  <body>
+    <h1>Inscription SDK Demo</h1>
+
+    <div class="container">
+      <button id="connectWallet">Connect Wallet</button>
+      <button id="disconnectWallet" style="display: none">Disconnect</button>
+      <div id="accountInfo"></div>
+    </div>
+
+    <div class="container">
+      <h2>Create Inscription</h2>
+      <input type="file" id="fileInput" accept="image/*" />
+      <button id="inscribeBtn" disabled>Inscribe File</button>
+      <div id="inscriptionStatus"></div>
+    </div>
+
+    <script>
+      // Initialize after HCS loads
+      window.HCSReady = async () => {
+        const hbarSDK = window.HashgraphSDK;
+        const ledger = hbarSDK.LedgerId.TESTNET;
+        const PROJECT_ID = 'bfd9ad3ea26e2c73eb21e8f9c750c166'; // Get from WalletConnect Dashboard
+        const APP_METADATA = {
+          name: 'Inscription SDK Demo',
+          description: 'Demo app showing inscription creation and querying',
+          url: window.location.origin,
+          icons: ['https://kiloscribe.com/icon.png'],
+        };
+
+        // Get SDK instances
+        const wcSDK = window.HashinalsWalletConnectSDK;
+        let inscriptionSDK;
+        let currentAccountId;
+
+        // UI elements
+        const connectBtn = document.getElementById('connectWallet');
+        const disconnectBtn = document.getElementById('disconnectWallet');
+        const accountInfo = document.getElementById('accountInfo');
+        const inscribeBtn = document.getElementById('inscribeBtn');
+        const inscriptionStatus = document.getElementById('inscriptionStatus');
+        const queryResults = document.getElementById('queryResults');
+
+        // UI update helper
+        function updateUI(accountId, balance) {
+          currentAccountId = accountId;
+
+          if (accountId) {
+            connectBtn.style.display = 'none';
+            disconnectBtn.style.display = 'block';
+            inscribeBtn.disabled = false;
+
+            accountInfo.innerHTML = `
+              Connected Account: ${accountId}<br>
+              Balance: ${balance} HBAR
+            `;
+
+            // Initialize inscription SDK
+            inscriptionSDK = new window.InscriptionSDK({
+              apiKey:
+                'U2FsdGVkX1+tdUXOAXxJml1OLCGFWHVjgej4/pVHEpeL4FSm6MTRqnYNZwrFCYnJ24j+Ese9gcgoRtAI3qC8mA==', // Get from Kiloscribe Dashboard
+              network: 'testnet',
+            });
+          } else {
+            connectBtn.style.display = 'block';
+            disconnectBtn.style.display = 'none';
+            inscribeBtn.disabled = true;
+            accountInfo.innerHTML = '';
+            currentAccountId = null;
+          }
+        }
+
+        // Check for existing connection
+        const accountResponse = await wcSDK.initAccount(
+          PROJECT_ID,
+          APP_METADATA,
+          ledger
+        );
+        if (accountResponse && accountResponse.accountId) {
+          updateUI(accountResponse.accountId, accountResponse.balance);
+        }
+
+        // Connect wallet
+        connectBtn.addEventListener('click', async () => {
+          try {
+            const { accountId, balance } = await wcSDK.connectWallet(
+              PROJECT_ID,
+              APP_METADATA,
+              ledger
+            );
+            updateUI(accountId, balance);
+          } catch (error) {
+            console.error('Connection failed:', error);
+            alert('Failed to connect wallet');
+          }
+        });
+
+        // Disconnect wallet
+        disconnectBtn.addEventListener('click', async () => {
+          try {
+            await wcSDK.disconnectWallet();
+            updateUI(null, null);
+          } catch (error) {
+            console.error('Disconnect failed:', error);
+          }
+        });
+
+        // Handle file inscription
+        inscribeBtn.addEventListener('click', async () => {
+          const fileInput = document.getElementById('fileInput');
+          const file = fileInput.files[0];
+          if (!file) {
+            alert('Please select a file first');
+            return;
+          }
+
+          try {
+            inscriptionStatus.textContent = 'Reading file...';
+
+            // Convert file to base64
+            const reader = new FileReader();
+            reader.onload = async (e) => {
+              const base64Data = e.target.result.split(',')[1];
+
+              try {
+                inscriptionStatus.textContent = 'Starting inscription...';
+
+                const signer = wcSDK.dAppConnector.signers.find((signer) => {
+                  return signer.getAccountId().toString() === currentAccountId;
+                });
+
+                // Start inscription
+                const result = await inscriptionSDK.inscribe(
+                  {
+                    file: {
+                      type: 'base64',
+                      base64: base64Data,
+                      fileName: file.name,
+                    },
+                    holderId: currentAccountId,
+                    mode: 'hashinal',
+                    metadataObject: {
+                      name: 'Example NFT',
+                      description: 'This is an example NFT',
+                      attributes: [
+                        {
+                          trait_type: 'Example Trait',
+                          value: 'Example Value',
+                        },
+                      ],
+                    },
+                  },
+                  signer
+                );
+
+                inscriptionStatus.textContent = `Inscription started! Transaction ID: ${result.transactionId}`;
+
+                // Poll for completion
+                const checkStatus = async () => {
+                  const status = await inscriptionSDK.retrieveInscription(
+                    result.jobId
+                  );
+                  inscriptionStatus.textContent = `Status: ${status.status}`;
+
+                  if (
+                    status.status !== 'completed' &&
+                    status.status !== 'failed'
+                  ) {
+                    setTimeout(checkStatus, 2000);
+                  }
+                };
+
+                checkStatus();
+              } catch (error) {
+                inscriptionStatus.textContent = `Inscription failed: ${error.message}`;
+              }
+            };
+
+            reader.readAsDataURL(file);
+          } catch (error) {
+            inscriptionStatus.textContent = `Error: ${error.message}`;
+          }
+        });
+      };
+    </script>
+  </body>
+</html>
+```
+
+#### C. Node.js Apps with Private Key
 
 This method is for backend services or scripts:
 
 1. Install dependencies:
+
 ```bash
 npm install @kiloscribe/inscription-sdk @hashgraph/sdk
 ```
 
 2. Create your script:
+
 ```typescript
 import { InscriptionSDK } from '@kiloscribe/inscription-sdk';
 import * as fs from 'fs';
@@ -184,7 +514,7 @@ const result = await sdk.inscribe(
     network: 'testnet',
     description: 'My first inscription',
   },
-  dAppSigner  // or use inscribeAndExecute with private key
+  dAppSigner // or use inscribeAndExecute with private key
 );
 ```
 
@@ -244,9 +574,63 @@ const result = await sdk.inscribe(
 );
 ```
 
+## Querying Inscriptions
+
+### Get Inscriptions
+
+```typescript
+// Get inscriptions with various filters
+const inscriptions = await sdk.getInscriptionNumbers({
+  ht_id: '0.0.123456', // Optional: Filter by token ID
+  sn: 42, // Optional: Filter by serial number
+  inscriptionNumber: 100, // Optional: Get specific inscription
+  sort: 'asc', // Optional: Sort order (asc/desc)
+  random: false, // Optional: Return random results
+  limit: 100, // Optional: Max number of results
+});
+
+// Example response:
+[
+  {
+    sn: 42, // Serial number
+    t_id: '0.0.123456', // Token ID
+    account_id: 123456, // Account ID
+    created_timestamp: '...', // Creation time
+    treasury_account_id: '0.0.789', // Treasury account
+    ht_id: 123456, // Hedera Token ID
+    image: 'https://...', // Image URL
+    inscription_number: 100, // Inscription number
+    json: {
+      // Metadata
+      name: 'My NFT',
+      creator: 'Creator',
+      description: '...',
+      image: 'https://...',
+      type: 'image/png',
+      properties: {
+        compiler: '...',
+      },
+      format: 'HIP412@2.0.0',
+    },
+    mimetype: 'image/png', // File type
+    op: '...', // Operation
+    p: '...', // Protocol
+  },
+];
+```
+
+## Examples
+
+### Vanilla JavaScript Demo
+
+A minimal example using vanilla JavaScript and HCS-3 recursion is available in the `demo/vanilla` directory.
+
+See the full example in `demo/vanilla/index.html` for wallet integration and inscription querying.
+
 ## Try the Interactive Demo
 
 We've included a complete demo app in the `demo` directory that shows:
+
 - Wallet connection with QR code
 - File selection with preview
 - Inscription creation
@@ -255,12 +639,14 @@ We've included a complete demo app in the `demo` directory that shows:
 To run it:
 
 1. Clone the repository:
+
 ```bash
 git clone https://github.com/kiloscribe/inscription-sdk.git
 cd inscription-sdk
 ```
 
 2. Set up the demo:
+
 ```bash
 cd demo
 npm install
@@ -268,11 +654,13 @@ cp .env.example .env
 ```
 
 3. Configure the demo:
-Edit `.env` and add:
+   Edit `.env` and add:
+
 - Your Kiloscribe API key
 - Your WalletConnect Project ID
 
 4. Start the demo:
+
 ```bash
 npm run dev
 ```
@@ -282,10 +670,12 @@ npm run dev
 ## File Support
 
 ### Size Limits
+
 - URL files: Up to 100MB
 - Base64/Local files: Up to 2MB
 
 ### Supported Formats
+
 - Images: jpg, jpeg, png, gif, bmp, webp, tiff, svg
 - Video: mp4, webm
 - Audio: mp3
@@ -297,20 +687,24 @@ npm run dev
 ## Common Issues
 
 ### 1. "Account ID not found"
+
 - Make sure you're using the correct Account ID format (0.0.123456)
 - Check if you're on the right network (testnet/mainnet)
 
 ### 2. "Transaction failed"
+
 - Ensure your account has enough HBAR (at least 1 HBAR recommended)
 - Check if your private key matches your account ID
 - Verify you're using the correct network
 
 ### 3. "File too large"
+
 - URL inscriptions: Max 100MB
 - Base64/Local files: Max 2MB
 - Try compressing your file or using a URL instead
 
 ### 4. WalletConnect Issues
+
 - Ensure your wallet (e.g., HashPack) is installed and on the correct network
 - Check if your WalletConnect Project ID is correct
 - Try clearing your browser cache
@@ -323,17 +717,17 @@ Always wrap SDK calls in try-catch:
 try {
   const result = await sdk.inscribe(config, signer);
   console.log('Inscription started:', result.jobId);
-  
+
   // Poll for status
   const checkStatus = async () => {
     const status = await sdk.retrieveInscription(result.jobId);
     console.log('Status:', status.status);
-    
+
     if (status.status !== 'completed' && status.status !== 'failed') {
-      setTimeout(checkStatus, 2000);  // Check every 2 seconds
+      setTimeout(checkStatus, 2000); // Check every 2 seconds
     }
   };
-  
+
   checkStatus();
 } catch (error) {
   console.error('Error:', error instanceof Error ? error.message : error);

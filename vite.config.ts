@@ -1,6 +1,7 @@
 import { defineConfig } from 'vite';
 import path from 'path';
 import { nodePolyfills } from 'vite-plugin-node-polyfills';
+import StringReplace from 'vite-plugin-string-replace';
 import dts from 'vite-plugin-dts';
 
 export default defineConfig(({ mode }) => {
@@ -16,6 +17,12 @@ export default defineConfig(({ mode }) => {
 
   const plugins = [
     nodePolyfills(),
+    StringReplace([
+      {
+        search: 'VITE_BUILD_FORMAT',
+        replace: format,
+      },
+    ]),
     dts({
       insertTypesEntry: true,
       include: ['src/**/*.ts'],

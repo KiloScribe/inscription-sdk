@@ -10,6 +10,8 @@ import {
   FileInput,
   HederaClientConfig,
   InscriptionResult,
+  InscriptionNumbersParams,
+  InscriptionNumberDetails,
 } from './types';
 import { DAppSigner } from '@hashgraph/hedera-wallet-connect';
 
@@ -304,8 +306,7 @@ export class InscriptionSDK {
         Buffer.from(transactionBytes, 'base64')
       );
 
-      const signedTransaction = await transaction.signWithSigner(signer);
-      const executeTx = await signedTransaction.executeWithSigner(signer);
+      const executeTx = await transaction.executeWithSigner(signer);
       const receipt = await executeTx.getReceiptWithSigner(signer);
       const status = receipt.status.toString();
 
@@ -416,6 +417,25 @@ export class InscriptionSDK {
           error.response?.data?.message || 'Failed to retrieve inscription'
         );
       }
+      throw error;
+    }
+  }
+
+  /**
+   * Fetch inscription numbers with optional filtering and sorting
+   * @param params Query parameters for filtering and sorting inscriptions
+   * @returns Array of inscription details
+   */
+  async getInscriptionNumbers(
+    params: InscriptionNumbersParams = {}
+  ): Promise<InscriptionNumberDetails[]> {
+    try {
+      const response = await this.client.get('/inscriptions/numbers', {
+        params,
+      });
+      return response.data;
+    } catch (error) {
+      this.logger.error('Failed to fetch inscription numbers:', error);
       throw error;
     }
   }

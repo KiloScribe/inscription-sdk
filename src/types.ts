@@ -75,6 +75,42 @@ export interface FileMetadata {
   mimeType: string;
 }
 
+export interface InscriptionNumbersParams {
+  ht_id?: string;
+  sn?: number;
+  inscriptionNumber?: number;
+  sort?: 'asc' | 'desc';
+  random?: boolean;
+  limit?: number;
+}
+
+export interface InscriptionJson {
+  name: string;
+  creator: string;
+  description: string;
+  image: string;
+  type: string;
+  properties: {
+    compiler: string;
+  };
+  format: string;
+}
+
+export interface InscriptionNumberDetails {
+  sn: number;
+  t_id: string;
+  account_id: number;
+  created_timestamp: string;
+  treasury_account_id: string;
+  ht_id: number;
+  image: string;
+  inscription_number: number;
+  json: InscriptionJson;
+  mimetype: string;
+  op: string;
+  p: string;
+}
+
 export class ValidationError extends Error {
   constructor(message: string) {
     super(message);
