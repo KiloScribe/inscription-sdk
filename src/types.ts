@@ -57,6 +57,9 @@ export interface ImageJobResponse {
   error?: string;
   transactionId?: string;
   transactionBytes?: string;
+  topic_id: string;
+  jsonTopicId: string;
+  registryTopicId: string;
 }
 
 export interface InscriptionSDKConfig {

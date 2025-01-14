@@ -1,6 +1,6 @@
 {
   "name": "@kiloscribe/inscription-sdk",
-  "version": "1.0.15",
+  "version": "1.0.16",
   "description": "SDK for inscribing files on Hedera",
   "type": "module",
   "files": [
