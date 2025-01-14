@@ -1,6 +1,6 @@
 {
   "name": "@kiloscribe/inscription-sdk",
-  "version": "1.0.14",
+  "version": "1.0.15",
   "description": "SDK for inscribing files on Hedera",
   "type": "module",
   "files": [
@@ -60,7 +60,7 @@
     "vite-plugin-string-replace": "^1.1.3"
   },
   "devDependencies": {
-    "@kiloscribe/inscription-sdk": "1.0.11",
+    "@kiloscribe/inscription-sdk": "1.0.15",
     "dotenv": "^16.4.5",
     "rimraf": "^5.0.0",
     "terser": "^5.37.0",
