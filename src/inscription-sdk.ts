@@ -14,6 +14,7 @@ import {
   InscriptionNumberDetails,
 } from './types';
 import { DAppSigner } from '@hashgraph/hedera-wallet-connect';
+import { Auth, AuthConfig, AuthResult } from './auth';
 
 export class InscriptionSDK {
   private readonly client: AxiosInstance;
@@ -392,6 +393,30 @@ export class InscriptionSDK {
     };
   }
 
+  private async retryWithBackoff<T>(
+    operation: () => Promise<T>,
+    maxRetries: number = 3,
+    baseDelay: number = 1000
+  ): Promise<T> {
+    for (let attempt = 0; attempt < maxRetries; attempt++) {
+      try {
+        return await operation();
+      } catch (error) {
+        if (attempt === maxRetries - 1) {
+          throw error;
+        }
+
+        const delay = baseDelay * Math.pow(2, attempt);
+        await new Promise((resolve) => setTimeout(resolve, delay));
+
+        this.logger.debug(
+          `Retry attempt ${attempt + 1}/${maxRetries} after ${delay}ms delay`
+        );
+      }
+    }
+    throw new Error('Retry operation failed');
+  }
+
   /**
    * Retrieves an inscription by its transaction id. Call this function on an interval
    * so you can retrieve the status. Store the transaction id in your database if you
@@ -403,20 +428,18 @@ export class InscriptionSDK {
    */
   async retrieveInscription(txId: string): Promise<ImageJobResponse> {
     if (!txId) {
-      throw new ValidationError('Inscription ID is required');
+      throw new ValidationError('Transaction ID is required');
     }
 
     try {
-      const response = await this.client.get(
-        `/inscriptions/retrieve-inscription/${txId}`
-      );
-      return response.data;
-    } catch (error) {
-      if (axios.isAxiosError(error)) {
-        throw new Error(
-          error.response?.data?.message || 'Failed to retrieve inscription'
+      return await this.retryWithBackoff(async () => {
+        const response = await this.client.get(
+          `/inscriptions/retrieve-inscription?id=${txId}`
         );
-      }
+        return response.data;
+      });
+    } catch (error) {
+      this.logger.error('Failed to retrieve inscription:', error);
       throw error;
     }
   }
@@ -438,5 +461,33 @@ export class InscriptionSDK {
       this.logger.error('Failed to fetch inscription numbers:', error);
       throw error;
     }
+  }
+
+  /**
+   * Authenticates the SDK with the provided configuration
+   * @param config - The configuration for authentication
+   * @returns The authentication result
+   */
+  static async authenticate(config: AuthConfig): Promise<AuthResult> {
+    const auth = new Auth(config);
+    return auth.authenticate();
+  }
+
+  /**
+   * Creates an instance of the InscriptionSDK with authentication.
+   * Useful for cases where you don't have an API key but need to authenticate from server-side
+   * with a private key.
+   * @param config - The configuration for authentication
+   * @returns An instance of the InscriptionSDK
+   */
+  static async createWithAuth(config: AuthConfig): Promise<InscriptionSDK> {
+    const auth = new Auth(config);
+
+    const { apiKey } = await auth.authenticate();
+
+    return new InscriptionSDK({
+      apiKey,
+      network: config.network || 'mainnet',
+    });
   }
 }

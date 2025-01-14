@@ -1,6 +1,6 @@
 {
   "name": "@kiloscribe/inscription-sdk",
-  "version": "1.0.13",
+  "version": "1.0.14",
   "description": "SDK for inscribing files on Hedera",
   "type": "module",
   "files": [
@@ -30,6 +30,7 @@
     "example:file": "tsx examples/inscribe-file.ts",
     "example:url": "tsx examples/inscribe-url.ts",
     "example:hashinal": "tsx examples/inscribe-hashinal.ts",
+    "example:auth": "tsx examples/server-auth.ts",
     "demo:dev": "vite -c demo/vite.config.ts",
     "demo:build": "vite build -c demo/vite.config.ts",
     "demo:preview": "vite preview -c demo/vite.config.ts"
@@ -71,5 +72,6 @@
   },
   "publishConfig": {
     "access": "public"
-  }
+  },
+  "packageManager": "yarn@3.6.1+sha512.de524adec81a6c3d7a26d936d439d2832e351cdfc5728f9d91f3fc85dd20b04391c038e9b4ecab11cae2b0dd9f0d55fd355af766bc5c1a7f8d25d96bb2a0b2ca"
 }
