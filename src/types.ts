@@ -60,6 +60,12 @@ export interface ImageJobResponse {
   topic_id: string;
   jsonTopicId: string;
   registryTopicId: string;
+  fileStandard?: 1 | 2 | 6;
+  mode?: InscriptionMode;
+}
+
+export interface RetrievedInscriptionResult extends ImageJobResponse {
+  jobId: string;
 }
 
 export interface InscriptionSDKConfig {

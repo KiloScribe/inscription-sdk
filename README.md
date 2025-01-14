@@ -16,6 +16,9 @@ TypeScript/JavaScript SDK for inscribing files on the Hedera network using Kilos
   - [3. URL Inscription](#3-url-inscription)
 - [Querying Inscriptions](#querying-inscriptions)
   - [Get Inscriptions](#get-inscriptions)
+- [Checking Inscription Status](#checking-inscription-status)
+  - [1. Simple Status Check](#1-simple-status-check)
+  - [2. Wait for Completion](#2-wait-for-completion)
 - [Examples](#examples)
   - [Vanilla JavaScript Demo](#vanilla-javascript-demo)
   - [Try the Interactive Demo](#try-the-interactive-demo)
@@ -145,9 +148,18 @@ const result = await sdk.inscribe(
   dAppSigner
 );
 
-// Check status
-const status = await sdk.retrieveInscription(result.jobId);
-console.log('Status:', status.status);
+// Wait for inscription to complete
+const complete = await sdk.waitForInscription(
+  result.jobId,
+  30,    // max attempts
+  4000,  // interval in ms
+  true   // check for completion status
+);
+
+console.log('Inscription complete:', {
+  topic_id: complete.topic_id,
+  status: complete.status
+});
 ```
 
 ## B. Loading via HCS-3 Recursion
@@ -646,6 +658,37 @@ const inscriptions = await sdk.getInscriptionNumbers({
   },
 ];
 ```
+
+## Checking Inscription Status
+
+The SDK provides two methods for checking inscription status:
+
+### 1. Simple Status Check
+
+```typescript
+const status = await sdk.retrieveInscription(result.jobId);
+console.log('Status:', status.status);
+```
+
+### 2. Wait for Completion
+
+The `waitForInscription` method will poll until the inscription meets completion criteria:
+
+```typescript
+const complete = await sdk.waitForInscription(
+  result.jobId,
+  30,    // max attempts (optional, default: 30)
+  4000,  // interval in ms (optional, default: 4000)
+  true   // check completion status (optional, default: false)
+);
+```
+
+Completion criteria varies by inscription type:
+- Regular files: Need `topic_id`
+- Hashinal NFTs: Need both `topic_id` and `jsonTopicId`
+- Dynamic files (HCS-6): Need `topic_id`, `jsonTopicId`, and `registryTopicId`
+
+If `checkCompletion` is true, also verifies `status === 'completed'`.
 
 ## Examples
 

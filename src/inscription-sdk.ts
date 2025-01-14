@@ -12,6 +12,7 @@ import {
   InscriptionResult,
   InscriptionNumbersParams,
   InscriptionNumberDetails,
+  RetrievedInscriptionResult,
 } from './types';
 import { DAppSigner } from '@hashgraph/hedera-wallet-connect';
 import { Auth, AuthConfig, AuthResult } from './auth';
@@ -426,7 +427,7 @@ export class InscriptionSDK {
    * @throws ValidationError if the ID is invalid
    * @throws Error if the retrieval fails
    */
-  async retrieveInscription(txId: string): Promise<ImageJobResponse> {
+  async retrieveInscription(txId: string): Promise<RetrievedInscriptionResult> {
     if (!txId) {
       throw new ValidationError('Transaction ID is required');
     }
@@ -436,7 +437,8 @@ export class InscriptionSDK {
         const response = await this.client.get(
           `/inscriptions/retrieve-inscription?id=${txId}`
         );
-        return response.data;
+        const result = response.data as ImageJobResponse;
+        return { ...result, jobId: result.id };
       });
     } catch (error) {
       this.logger.error('Failed to retrieve inscription:', error);
@@ -489,5 +491,59 @@ export class InscriptionSDK {
       apiKey,
       network: config.network || 'mainnet',
     });
+  }
+
+  async waitForInscription(
+    txId: string,
+    maxAttempts: number = 30,
+    intervalMs: number = 4000,
+    checkCompletion: boolean = false
+  ): Promise<RetrievedInscriptionResult> {
+    let attempts = 0;
+
+    while (attempts < maxAttempts) {
+      const result = await this.retrieveInscription(txId);
+
+      if (result.error) {
+        throw new Error(result.error);
+      }
+
+      const isHashinal = result.mode === 'hashinal';
+      const isDynamic = result.fileStandard?.toString() === '6';
+
+      this.logger.info('result is', result);
+      // For hashinal NFTs, need both topic IDs
+      if (isHashinal && result.topic_id && result.jsonTopicId) {
+        if (!checkCompletion || result.status === 'completed') {
+          return result;
+        }
+      }
+
+      // For regular files, just need the topic ID
+      if (!isHashinal && !isDynamic && result.topic_id) {
+        if (!checkCompletion || result.status === 'completed') {
+          return result;
+        }
+      }
+
+      // For dynamic files (HCS-6), need all three topic IDs
+      if (
+        isDynamic &&
+        result.topic_id &&
+        result.jsonTopicId &&
+        result.registryTopicId
+      ) {
+        if (!checkCompletion || result.status === 'completed') {
+          return result;
+        }
+      }
+
+      await new Promise((resolve) => setTimeout(resolve, intervalMs));
+      attempts++;
+    }
+
+    throw new Error(
+      `Inscription ${txId} did not complete within ${maxAttempts} attempts`
+    );
   }
 }
