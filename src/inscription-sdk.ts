@@ -16,6 +16,7 @@ import {
 } from './types';
 import { DAppSigner } from '@hashgraph/hedera-wallet-connect';
 import { Auth, AuthConfig, AuthResult } from './auth';
+import { ClientAuth } from './client-auth';
 
 export class InscriptionSDK {
   private readonly client: AxiosInstance;
@@ -77,6 +78,7 @@ export class InscriptionSDK {
       baseURL: 'https://v2-api.tier.bot/api',
       headers,
     });
+    this.logger = Logger.getInstance();
   }
 
   private async getFileMetadata(url: string): Promise<FileMetadata> {
@@ -482,8 +484,30 @@ export class InscriptionSDK {
    * @param config - The configuration for authentication
    * @returns An instance of the InscriptionSDK
    */
-  static async createWithAuth(config: AuthConfig): Promise<InscriptionSDK> {
-    const auth = new Auth(config);
+  static async createWithAuth(
+    config:
+      | {
+          type: 'client';
+          accountId: string;
+          signer: DAppSigner;
+          network?: 'mainnet' | 'testnet';
+          baseUrl?: string;
+        }
+      | {
+          type: 'server';
+          accountId: string;
+          privateKey: string;
+          network?: 'mainnet' | 'testnet';
+          baseUrl?: string;
+        }
+  ): Promise<InscriptionSDK> {
+    const auth =
+      config.type === 'client'
+        ? new ClientAuth({
+            ...config,
+            logger: Logger.getInstance(),
+          })
+        : new Auth(config);
 
     const { apiKey } = await auth.authenticate();
 
@@ -511,7 +535,6 @@ export class InscriptionSDK {
       const isHashinal = result.mode === 'hashinal';
       const isDynamic = result.fileStandard?.toString() === '6';
 
-      this.logger.info('result is', result);
       // For hashinal NFTs, need both topic IDs
       if (isHashinal && result.topic_id && result.jsonTopicId) {
         if (!checkCompletion || result.status === 'completed') {

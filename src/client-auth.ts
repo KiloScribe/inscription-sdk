@@ -1,28 +1,32 @@
-import { PrivateKey } from '@hashgraph/sdk';
+import { DAppSigner } from '@hashgraph/hedera-wallet-connect';
 import axios from 'axios';
+import { Logger } from './logger';
 
 export interface AuthConfig {
   accountId: string;
-  privateKey: string;
+  signer: DAppSigner;
   network?: 'mainnet' | 'testnet';
   baseUrl?: string;
+  logger: Logger;
 }
 
 export interface AuthResult {
   apiKey: string;
 }
 
-export class Auth {
+export class ClientAuth {
   private readonly accountId: string;
-  private readonly privateKey: PrivateKey;
+  private readonly signer: DAppSigner;
   private readonly baseUrl: string;
   private readonly network: string;
+  private readonly logger: Logger;
 
   constructor(config: AuthConfig) {
     this.accountId = config.accountId;
-    this.privateKey = PrivateKey.fromStringED25519(config.privateKey);
+    this.signer = config.signer;
     this.network = config.network || 'mainnet';
     this.baseUrl = config.baseUrl || 'https://kiloscribe.com';
+    this.logger = config.logger;
   }
 
   async authenticate(): Promise<AuthResult> {
@@ -40,7 +44,8 @@ export class Auth {
     }
 
     const message = requestSignatureResponse.data.message;
-    const signature = await this.signMessage(message);
+
+    const signature = await this.signMessage(JSON.stringify(message));
 
     const authResponse = await axios.post(
       `${this.baseUrl}/api/auth/authenticate`,
@@ -63,11 +68,18 @@ export class Auth {
       apiKey: authResponse.data.apiKey,
     };
   }
-  
 
   private async signMessage(message: string): Promise<string> {
-    const messageBytes = new TextEncoder().encode(message);
-    const signatureBytes = await this.privateKey.sign(messageBytes);
-    return Buffer.from(signatureBytes).toString('hex');
+    try {
+      const messageBytes = new TextEncoder().encode(message);
+      this.logger.debug(`signing message`);
+      const signatureBytes = await this.signer.sign([messageBytes], {
+        encoding: 'utf-8',
+      });
+      return Buffer.from(signatureBytes?.[0].signature).toString('hex');
+    } catch (e) {
+      this.logger.error(`Failed to sign message`, e);
+      throw new Error('Failed to sign message');
+    }
   }
 }
