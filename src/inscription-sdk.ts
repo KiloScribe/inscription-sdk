@@ -185,7 +185,9 @@ export class InscriptionSDK {
 
     if (!InscriptionSDK.VALID_MODES.includes(request.mode)) {
       throw new ValidationError(
-        `Invalid mode. Must be one of: ${InscriptionSDK.VALID_MODES.join(', ')}`
+        `Invalid mode: ${
+          request.mode
+        }. Must be one of: ${InscriptionSDK.VALID_MODES.join(', ')}`
       );
     }
 
