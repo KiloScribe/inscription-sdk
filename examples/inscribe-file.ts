@@ -3,6 +3,9 @@ import { readFileSync } from 'fs';
 import { fileURLToPath } from 'url';
 import { dirname, join } from 'path';
 import { sdkConfig, hederaConfig, inscriptionConfig } from './config';
+import dotenv from 'dotenv';
+
+dotenv.config();
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = dirname(__filename);
@@ -13,15 +16,17 @@ async function inscribeFile() {
 
   // Read image file and convert to base64
   const imagePath = join(__dirname, 'assets', 'example.webp');
+  const moonscapeImage = join(__dirname, 'assets', 'moonscape.ico');
   const imageBuffer = readFileSync(imagePath);
   const base64Image = imageBuffer.toString('base64');
+  const base64MoonscapeImage = readFileSync(moonscapeImage).toString('base64');
 
   try {
     const config = {
       file: {
         type: 'base64' as const,
-        base64: base64Image,
-        fileName: 'example.webp',
+        base64: base64MoonscapeImage,
+        fileName: 'moonscape.ico',
       },
       holderId: inscriptionConfig.holderId,
       mode: 'file' as const,
@@ -35,7 +40,7 @@ async function inscribeFile() {
     console.log('Inscription completed:', result);
 
     // You can also retrieve the inscription status
-    const status = await sdk.retrieveInscription(result.jobId);
+    const status = await sdk.waitForInscription(result.jobId);
     console.log('Inscription status:', status);
   } catch (error) {
     console.error('Error:', error instanceof Error ? error.message : error);

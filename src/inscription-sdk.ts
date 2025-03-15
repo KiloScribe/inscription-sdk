@@ -41,6 +41,7 @@ export class InscriptionSDK {
     bmp: 'image/bmp',
     webp: 'image/webp',
     tiff: 'image/tiff',
+    tif: 'image/tiff',
     svg: 'image/svg+xml',
     mp4: 'video/mp4',
     webm: 'video/webm',
@@ -53,16 +54,19 @@ export class InscriptionSDK {
     ppt: 'application/vnd.ms-powerpoint',
     pptx: 'application/vnd.openxmlformats-officedocument.presentationml.presentation',
     html: 'text/html',
+    htm: 'text/html',
     css: 'text/css',
-    php: 'text/x-php',
-    java: 'text/x-java',
-    js: 'text/javascript',
+    php: 'application/x-httpd-php',
+    java: 'text/x-java-source',
+    js: 'application/javascript',
+    mjs: 'application/javascript',
     csv: 'text/csv',
     json: 'application/json',
     txt: 'text/plain',
     glb: 'model/gltf-binary',
     wav: 'audio/wav',
     ogg: 'audio/ogg',
+    oga: 'audio/ogg',
     flac: 'audio/flac',
     aac: 'audio/aac',
     m4a: 'audio/mp4',
@@ -70,7 +74,9 @@ export class InscriptionSDK {
     mov: 'video/quicktime',
     mkv: 'video/x-matroska',
     m4v: 'video/mp4',
-    ts: 'video/mp2t',
+    mpg: 'video/mpeg',
+    mpeg: 'video/mpeg',
+    ts: 'application/typescript',
     zip: 'application/zip',
     rar: 'application/vnd.rar',
     tar: 'application/x-tar',
@@ -92,12 +98,12 @@ export class InscriptionSDK {
     woff: 'font/woff',
     woff2: 'font/woff2',
     eot: 'application/vnd.ms-fontobject',
-    psd: 'image/vnd.adobe.photoshop',
+    psd: 'application/vnd.adobe.photoshop',
     ai: 'application/postscript',
     eps: 'application/postscript',
     ps: 'application/postscript',
-    sqlite: 'application/vnd.sqlite3',
-    db: 'application/vnd.sqlite3',
+    sqlite: 'application/x-sqlite3',
+    db: 'application/x-sqlite3',
     apk: 'application/vnd.android.package-archive',
     ics: 'text/calendar',
     vcf: 'text/vcard',
@@ -105,13 +111,14 @@ export class InscriptionSDK {
     rb: 'text/x-ruby',
     go: 'text/x-go',
     rs: 'text/x-rust',
-    typescript: 'text/typescript',
+    typescript: 'application/typescript',
     jsx: 'text/jsx',
     tsx: 'text/tsx',
     sql: 'application/sql',
     toml: 'application/toml',
     avif: 'image/avif',
     jxl: 'image/jxl',
+    weba: 'audio/webm',
   };
 
   constructor(config: InscriptionSDKConfig) {
@@ -214,8 +221,12 @@ export class InscriptionSDK {
       }
 
       const mimeType = file.mimeType || this.getMimeType(file.fileName);
+      
       const validMimeTypes = Object.values(InscriptionSDK.VALID_MIME_TYPES);
-      if (!validMimeTypes.includes(mimeType)) {
+      
+      if (mimeType === 'image/vnd.microsoft.icon' && !validMimeTypes.includes(mimeType)) {
+        this.logger.debug('Converting image/vnd.microsoft.icon to image/x-icon');
+      } else if (!validMimeTypes.includes(mimeType)) {
         throw new ValidationError(
           'File must have one of the supported MIME types'
         );
