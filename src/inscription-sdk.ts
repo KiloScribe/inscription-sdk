@@ -147,9 +147,11 @@ export class InscriptionSDK {
   private async getFileMetadata(url: string): Promise<FileMetadata> {
     try {
       const response = await axios.get(url);
+      const mimeType = response.headers['content-type'] || '';
+
       return {
         size: parseInt(response.headers['content-length'] || '0', 10),
-        mimeType: response.headers['content-type'] || '',
+        mimeType: mimeType,
       };
     } catch (error) {
       this.logger.error('Error fetching file metadata:', error);
@@ -204,6 +206,33 @@ export class InscriptionSDK {
     this.validateFileInput(request.file);
   }
 
+  private normalizeMimeType(mimeType: string): string {
+    if (mimeType === 'image/vnd.microsoft.icon') {
+      this.logger.debug(
+        'Normalizing MIME type from image/vnd.microsoft.icon to image/x-icon'
+      );
+      return 'image/x-icon';
+    }
+    return mimeType;
+  }
+
+  private validateMimeType(mimeType: string): boolean {
+    const validMimeTypes = Object.values(InscriptionSDK.VALID_MIME_TYPES);
+
+    if (validMimeTypes.includes(mimeType)) {
+      return true;
+    }
+
+    if (mimeType === 'image/vnd.microsoft.icon') {
+      this.logger.debug(
+        'Accepting alternative MIME type for ICO: image/vnd.microsoft.icon'
+      );
+      return true;
+    }
+
+    return false;
+  }
+
   private validateFileInput(file: FileInput): void {
     if (file.type === 'base64') {
       if (!file.base64) {
@@ -221,15 +250,15 @@ export class InscriptionSDK {
       }
 
       const mimeType = file.mimeType || this.getMimeType(file.fileName);
-      
-      const validMimeTypes = Object.values(InscriptionSDK.VALID_MIME_TYPES);
-      
-      if (mimeType === 'image/vnd.microsoft.icon' && !validMimeTypes.includes(mimeType)) {
-        this.logger.debug('Converting image/vnd.microsoft.icon to image/x-icon');
-      } else if (!validMimeTypes.includes(mimeType)) {
+
+      if (!this.validateMimeType(mimeType)) {
         throw new ValidationError(
           'File must have one of the supported MIME types'
         );
+      }
+
+      if (file.mimeType === 'image/vnd.microsoft.icon') {
+        file.mimeType = this.normalizeMimeType(file.mimeType);
       }
     } else if (file.type === 'url') {
       if (!file.url) {
@@ -259,6 +288,10 @@ export class InscriptionSDK {
               InscriptionSDK.MAX_URL_FILE_SIZE / 1024 / 1024
             }MB`
           );
+        }
+
+        if (fileMetadata.mimeType === 'image/vnd.microsoft.icon') {
+          fileMetadata.mimeType = this.normalizeMimeType(fileMetadata.mimeType);
         }
       }
 
