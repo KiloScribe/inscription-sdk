@@ -17,6 +17,19 @@ import {
 import { DAppSigner } from '@hashgraph/hedera-wallet-connect';
 import { Auth, AuthConfig, AuthResult } from './auth';
 import { ClientAuth } from './client-auth';
+import * as fileType from 'file-type';
+
+// Define progress tracking types directly in this file
+export interface RegistrationProgressData {
+  stage: 'preparing' | 'submitting' | 'confirming' | 'completed' | 'verifying';
+  message: string;
+  progressPercent?: number;
+  details?: Record<string, any>;
+}
+
+export type RegistrationProgressCallback = (
+  data: RegistrationProgressData
+) => void;
 
 export class InscriptionSDK {
   private readonly client: AxiosInstance;
@@ -159,6 +172,12 @@ export class InscriptionSDK {
     }
   }
 
+  /**
+   * Gets the MIME type for a file based on its extension.
+   * @param fileName - The name of the file.
+   * @returns The MIME type of the file.
+   * @throws ValidationError if the file has no extension.
+   */
   private getMimeType(fileName: string): string {
     const extension = fileName.toLowerCase().split('.').pop();
     if (!extension) {
@@ -176,6 +195,11 @@ export class InscriptionSDK {
     return mimeType;
   }
 
+  /**
+   * Validates the request object.
+   * @param request - The request object to validate.
+   * @throws ValidationError if the request is invalid.
+   */
   private validateRequest(request: StartInscriptionRequest): void {
     this.logger.debug('Validating request:', request);
     if (!request.holderId || request.holderId.trim() === '') {
@@ -208,6 +232,11 @@ export class InscriptionSDK {
     this.validateFileInput(request.file);
   }
 
+  /**
+   * Normalizes the MIME type to a standard format.
+   * @param mimeType - The MIME type to normalize.
+   * @returns The normalized MIME type.
+   */
   private normalizeMimeType(mimeType: string): string {
     if (mimeType === 'image/vnd.microsoft.icon') {
       this.logger.debug(
@@ -269,6 +298,26 @@ export class InscriptionSDK {
     }
   }
 
+  private async detectMimeTypeFromBase64(base64Data: string): Promise<string> {
+    if (base64Data.startsWith('data:')) {
+      const matches = base64Data.match(/^data:([^;]+);base64,/);
+      if (matches && matches.length > 1) {
+        return matches[1];
+      }
+    }
+
+    try {
+      const sanitizedBase64 = base64Data.replace(/\s/g, '');
+      const buffer = Buffer.from(sanitizedBase64, 'base64');
+
+      const typeResult = await fileType.fileTypeFromBuffer(buffer);
+      return typeResult?.mime || 'application/octet-stream';
+    } catch (err) {
+      this.logger.warn('Failed to detect MIME type from buffer');
+      return 'application/octet-stream';
+    }
+  }
+
   /**
    * Starts an inscription and returns the transaction bytes.
    * @param request - The request object containing the file to inscribe and the client configuration
@@ -282,8 +331,12 @@ export class InscriptionSDK {
     try {
       this.validateRequest(request);
 
+      let mimeType = request.file.mimeType;
+
       if (request.file.type === 'url') {
         const fileMetadata = await this.getFileMetadata(request.file.url);
+        mimeType = fileMetadata.mimeType || mimeType;
+
         if (fileMetadata.size > InscriptionSDK.MAX_URL_FILE_SIZE) {
           throw new ValidationError(
             `File size exceeds maximum URL file limit of ${
@@ -291,10 +344,12 @@ export class InscriptionSDK {
             }MB`
           );
         }
+      } else if (request.file.type === 'base64') {
+        mimeType = await this.detectMimeTypeFromBase64(request.file.base64);
+      }
 
-        if (fileMetadata.mimeType === 'image/vnd.microsoft.icon') {
-          fileMetadata.mimeType = this.normalizeMimeType(fileMetadata.mimeType);
-        }
+      if (mimeType === 'image/vnd.microsoft.icon') {
+        mimeType = this.normalizeMimeType(mimeType);
       }
 
       if (request.jsonFileURL) {
@@ -329,8 +384,7 @@ export class InscriptionSDK {
           ...requestBody,
           fileBase64: request.file.base64,
           fileName: request.file.fileName,
-          fileMimeType:
-            request.file.mimeType || this.getMimeType(request.file.fileName),
+          fileMimeType: mimeType || this.getMimeType(request.file.fileName),
         });
       }
       return response.data;
@@ -623,42 +677,140 @@ export class InscriptionSDK {
     txId: string,
     maxAttempts: number = 30,
     intervalMs: number = 4000,
-    checkCompletion: boolean = false
+    checkCompletion: boolean = false,
+    progressCallback?: RegistrationProgressCallback
   ): Promise<RetrievedInscriptionResult> {
     let attempts = 0;
+    let highestPercentSoFar = 0;
+
+    const reportProgress = (
+      stage:
+        | 'preparing'
+        | 'submitting'
+        | 'confirming'
+        | 'completed'
+        | 'verifying',
+      message: string,
+      percent: number,
+      details?: Record<string, any>
+    ) => {
+      if (progressCallback) {
+        try {
+          highestPercentSoFar = Math.max(highestPercentSoFar, percent);
+          progressCallback({
+            stage,
+            message,
+            progressPercent: highestPercentSoFar,
+            details: {
+              ...details,
+              txId,
+              currentAttempt: attempts,
+              maxAttempts,
+            },
+          });
+        } catch (err) {
+          this.logger.warn(`Error in progress callback: ${err}`);
+        }
+      }
+    };
+
+    reportProgress('confirming', 'Starting inscription verification', 0);
 
     while (attempts < maxAttempts) {
+      reportProgress(
+        'confirming',
+        `Verifying inscription status (attempt ${attempts + 1}/${maxAttempts})`,
+        5,
+        { attempt: attempts + 1 }
+      );
+
       const result = await this.retrieveInscription(txId);
 
       if (result.error) {
+        reportProgress('verifying', `Error: ${result.error}`, 100, {
+          error: result.error,
+        });
         throw new Error(result.error);
       }
+
+      let progressPercent = 5;
+
+      if (
+        result.messages !== undefined &&
+        result.maxMessages !== undefined &&
+        result.maxMessages > 0
+      ) {
+        progressPercent = Math.min(
+          95,
+          5 + (result.messages / result.maxMessages) * 90
+        );
+
+        if (result.completed) {
+          progressPercent = 100;
+        }
+      } else if (result.status === 'processing') {
+        progressPercent = 10;
+      } else if (result.completed) {
+        progressPercent = 100;
+      }
+
+      reportProgress(
+        result.completed ? 'completed' : 'confirming',
+        result.completed
+          ? 'Inscription completed successfully'
+          : `Processing inscription (${result.status})`,
+        progressPercent,
+        {
+          status: result.status,
+          messagesProcessed: result.messages,
+          maxMessages: result.maxMessages,
+          messageCount: result.messages,
+          completed: result.completed,
+          confirmedMessages: result.confirmedMessages,
+          result,
+        }
+      );
 
       const isHashinal = result.mode === 'hashinal';
       const isDynamic = result.fileStandard?.toString() === '6';
 
-      // For hashinal NFTs, need both topic IDs
       if (isHashinal && result.topic_id && result.jsonTopicId) {
-        if (!checkCompletion || result.status === 'completed') {
+        if (!checkCompletion || result.completed) {
+          reportProgress(
+            'completed',
+            'Inscription verification complete',
+            100,
+            { result }
+          );
           return result;
         }
       }
 
-      // For regular files, just need the topic ID
       if (!isHashinal && !isDynamic && result.topic_id) {
-        if (!checkCompletion || result.status === 'completed') {
+        if (!checkCompletion || result.completed) {
+          reportProgress(
+            'completed',
+            'Inscription verification complete',
+            100,
+            { result }
+          );
           return result;
         }
       }
 
-      // For dynamic files (HCS-6), need all three topic IDs
       if (
         isDynamic &&
         result.topic_id &&
         result.jsonTopicId &&
         result.registryTopicId
       ) {
-        if (!checkCompletion || result.status === 'completed') {
+        if (!checkCompletion || result.completed) {
+          reportProgress(
+            'completed',
+            'Inscription verification complete',
+            100,
+            { result }
+          );
           return result;
         }
       }
@@ -666,6 +818,13 @@ export class InscriptionSDK {
       await new Promise((resolve) => setTimeout(resolve, intervalMs));
       attempts++;
     }
+
+    reportProgress(
+      'verifying',
+      `Inscription ${txId} did not complete within ${maxAttempts} attempts`,
+      100,
+      { timedOut: true }
+    );
 
     throw new Error(
       `Inscription ${txId} did not complete within ${maxAttempts} attempts`

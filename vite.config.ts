@@ -1,11 +1,11 @@
-import { defineConfig } from 'vite';
+import { defineConfig, LibraryFormats } from 'vite';
 import path from 'path';
 import { nodePolyfills } from 'vite-plugin-node-polyfills';
 import StringReplace from 'vite-plugin-string-replace';
 import dts from 'vite-plugin-dts';
 
 export default defineConfig(({ mode }) => {
-  const format = process.env.BUILD_FORMAT || 'es';
+  const format = (process.env.BUILD_FORMAT || 'es') as LibraryFormats;
   const outputDir = format === 'umd' ? 'dist/umd' : 'dist/es';
   const isEsm = format === 'es';
 
@@ -13,6 +13,7 @@ export default defineConfig(({ mode }) => {
     '@hashgraph/proto',
     '@hashgraph/sdk',
     'fetch-retry',
+    'vite-plugin-node-polyfills/shims/process',
   ];
 
   const plugins = [
@@ -26,12 +27,12 @@ export default defineConfig(({ mode }) => {
     dts({
       insertTypesEntry: true,
       include: ['src/**/*.ts'],
-      outputDir: outputDir,
+      outDir: outputDir,
     }),
   ];
 
   return {
-    plugins,
+    plugins: plugins as any,
     build: {
       outDir: outputDir,
       lib: {
@@ -41,7 +42,10 @@ export default defineConfig(({ mode }) => {
         formats: [format],
       },
       rollupOptions: {
-        external: format === 'es' ? externalDependencies : [],
+        external:
+          format === 'es'
+            ? externalDependencies
+            : ['vite-plugin-node-polyfills/shims/process'],
         output: {
           globals: (id) => id,
         },
@@ -67,4 +71,4 @@ export default defineConfig(({ mode }) => {
       external: externalDependencies,
     },
   };
-});
+}) as any;

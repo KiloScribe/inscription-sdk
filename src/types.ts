@@ -46,12 +46,16 @@ export interface InscriptionResult {
 export interface ImageJobResponse {
   id: string;
   status: string;
+  completed: boolean;
   hash?: string;
   jsonHash?: string;
   name?: string;
   tx_id: string;
   jsonName?: string;
   gcpFileName?: string;
+  messages?: number;
+  maxMessages?: number;
+  confirmedMessages?: boolean;
   fileUrl?: string;
   jsonFileUrl?: string;
   error?: string;
