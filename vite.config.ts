@@ -1,8 +1,8 @@
 import { defineConfig, LibraryFormats } from 'vite';
 import path from 'path';
-import { nodePolyfills } from 'vite-plugin-node-polyfills';
 import StringReplace from 'vite-plugin-string-replace';
 import dts from 'vite-plugin-dts';
+import { nodePolyfills } from 'vite-plugin-node-polyfills';
 
 export default defineConfig(({ mode }) => {
   const format = (process.env.BUILD_FORMAT || 'es') as LibraryFormats;
@@ -13,11 +13,9 @@ export default defineConfig(({ mode }) => {
     '@hashgraph/proto',
     '@hashgraph/sdk',
     'fetch-retry',
-    'vite-plugin-node-polyfills/shims/process',
   ];
 
   const plugins = [
-    nodePolyfills(),
     StringReplace([
       {
         search: 'VITE_BUILD_FORMAT',
@@ -29,6 +27,7 @@ export default defineConfig(({ mode }) => {
       include: ['src/**/*.ts'],
       outDir: outputDir,
     }),
+    nodePolyfills(),
   ];
 
   return {
@@ -42,16 +41,10 @@ export default defineConfig(({ mode }) => {
         formats: [format],
       },
       rollupOptions: {
-        external:
-          format === 'es'
-            ? externalDependencies
-            : ['vite-plugin-node-polyfills/shims/process'],
+        external: format === 'es' ? externalDependencies : [],
         output: {
           globals: (id) => id,
         },
-      },
-      commonjsOptions: {
-        include: [/node_modules/],
       },
       minify: 'terser',
       sourcemap: true,
@@ -61,9 +54,6 @@ export default defineConfig(({ mode }) => {
     },
     resolve: {
       alias: {
-        process: 'process/browser',
-        stream: 'stream-browserify',
-        zlib: 'browserify-zlib',
         util: 'util',
       },
     },

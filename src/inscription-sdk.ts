@@ -13,6 +13,8 @@ import {
   InscriptionNumbersParams,
   InscriptionNumberDetails,
   RetrievedInscriptionResult,
+  HolderInscriptionsParams,
+  HolderInscriptionsResponse,
 } from './types';
 import { DAppSigner } from '@hashgraph/hedera-wallet-connect';
 import { Auth, AuthConfig, AuthResult } from './auth';
@@ -829,5 +831,42 @@ export class InscriptionSDK {
     throw new Error(
       `Inscription ${txId} did not complete within ${maxAttempts} attempts`
     );
+  }
+
+  /**
+   * Fetch inscriptions owned by a specific holder
+   * @param params Query parameters for retrieving holder's inscriptions
+   * @returns Array of inscription details owned by the holder
+   */
+  async getHolderInscriptions(
+    params: HolderInscriptionsParams
+  ): Promise<HolderInscriptionsResponse> {
+    if (!params.holderId) {
+      throw new ValidationError('Holder ID is required');
+    }
+
+    try {
+      const queryParams: Record<string, string> = {
+        holderId: params.holderId,
+      };
+      
+      if (params.includeCollections) {
+        queryParams.includeCollections = '1';
+      }
+      
+      const response = await this.client.get('/inscriptions/holder-inscriptions', {
+        params: queryParams,
+      });
+      
+      return response.data;
+    } catch (error) {
+      this.logger.error('Failed to fetch holder inscriptions:', error);
+      if (axios.isAxiosError(error)) {
+        throw new Error(
+          error.response?.data?.message || 'Failed to fetch holder inscriptions'
+        );
+      }
+      throw error;
+    }
   }
 }

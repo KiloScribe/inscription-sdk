@@ -130,3 +130,10 @@ export class ValidationError extends Error {
     this.name = 'ValidationError';
   }
 }
+
+export interface HolderInscriptionsParams {
+  holderId: string;
+  includeCollections?: boolean;
+}
+
+export type HolderInscriptionsResponse = ImageJobResponse[];
