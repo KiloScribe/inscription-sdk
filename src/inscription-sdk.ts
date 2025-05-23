@@ -1,5 +1,5 @@
 import axios, { AxiosInstance } from 'axios';
-import { Client, Transaction, PrivateKey } from '@hashgraph/sdk';
+import { Client, PrivateKey, TransferTransaction } from '@hashgraph/sdk';
 import { Logger } from './logger';
 import {
   InscriptionSDKConfig,
@@ -427,7 +427,7 @@ export class InscriptionSDK {
       const privateKey = PrivateKey.fromString(clientConfig.privateKey);
       client.setOperator(clientConfig.accountId, privateKey);
 
-      const transaction = Transaction.fromBytes(
+      const transaction = TransferTransaction.fromBytes(
         Buffer.from(transactionBytes, 'base64')
       );
 
@@ -464,7 +464,7 @@ export class InscriptionSDK {
     signer: DAppSigner
   ): Promise<string> {
     try {
-      const transaction = Transaction.fromBytes(
+      const transaction = TransferTransaction.fromBytes(
         Buffer.from(transactionBytes, 'base64')
       );
 

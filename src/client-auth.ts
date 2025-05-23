@@ -1,6 +1,7 @@
 import { DAppSigner } from '@hashgraph/hedera-wallet-connect';
 import axios from 'axios';
 import { Logger } from './logger';
+import { Buffer } from 'buffer';
 
 export interface AuthConfig {
   accountId: string;

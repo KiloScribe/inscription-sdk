@@ -1,5 +1,6 @@
 import { PrivateKey } from '@hashgraph/sdk';
 import axios from 'axios';
+import { Buffer } from 'buffer';
 
 export interface AuthConfig {
   accountId: string;
