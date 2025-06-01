@@ -4,7 +4,7 @@ import { Buffer } from 'buffer';
 
 export interface AuthConfig {
   accountId: string;
-  privateKey: string;
+  privateKey: string | PrivateKey;
   network?: 'mainnet' | 'testnet';
   baseUrl?: string;
 }
@@ -21,7 +21,10 @@ export class Auth {
 
   constructor(config: AuthConfig) {
     this.accountId = config.accountId;
-    this.privateKey = PrivateKey.fromStringED25519(config.privateKey);
+    this.privateKey =
+      typeof config.privateKey === 'string'
+        ? PrivateKey.fromStringED25519(config.privateKey)
+        : config.privateKey;
     this.network = config.network || 'mainnet';
     this.baseUrl = config.baseUrl || 'https://kiloscribe.com';
   }
@@ -64,7 +67,6 @@ export class Auth {
       apiKey: authResponse.data.apiKey,
     };
   }
-  
 
   private async signMessage(message: string): Promise<string> {
     const messageBytes = new TextEncoder().encode(message);

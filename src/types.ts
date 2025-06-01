@@ -1,3 +1,5 @@
+import { PrivateKey } from '@hashgraph/sdk';
+
 export type Network = 'mainnet' | 'testnet';
 
 export type InscriptionMode =
@@ -79,7 +81,7 @@ export interface InscriptionSDKConfig {
 
 export interface HederaClientConfig {
   accountId: string;
-  privateKey: string;
+  privateKey: string | PrivateKey;
   network: Network;
 }
 

@@ -18,6 +18,7 @@ import {
 } from './types';
 import { DAppSigner } from '@hashgraph/hedera-wallet-connect';
 import { Auth, AuthConfig, AuthResult } from './auth';
+import { detectKeyTypeFromString } from '@hashgraphonline/standards-sdk';
 import { ClientAuth } from './client-auth';
 import * as fileType from 'file-type';
 
@@ -424,7 +425,22 @@ export class InscriptionSDK {
           ? Client.forMainnet()
           : Client.forTestnet();
 
-      const privateKey = PrivateKey.fromString(clientConfig.privateKey);
+      const keyIsString = typeof clientConfig.privateKey === 'string';
+      const keyType = keyIsString
+        ? detectKeyTypeFromString(clientConfig.privateKey as string)
+        : undefined;
+
+      let privateKey: PrivateKey;
+
+      if (keyIsString) {
+        privateKey =
+          keyType?.detectedType === 'ed25519'
+            ? PrivateKey.fromStringED25519(clientConfig.privateKey as string)
+            : PrivateKey.fromStringECDSA(clientConfig.privateKey as string);
+      } else {
+        privateKey = clientConfig.privateKey as PrivateKey;
+      }
+
       client.setOperator(clientConfig.accountId, privateKey);
 
       const transaction = TransferTransaction.fromBytes(
@@ -654,7 +670,7 @@ export class InscriptionSDK {
       | {
           type: 'server';
           accountId: string;
-          privateKey: string;
+          privateKey: string | PrivateKey;
           network?: 'mainnet' | 'testnet';
           baseUrl?: string;
         }
@@ -849,15 +865,18 @@ export class InscriptionSDK {
       const queryParams: Record<string, string> = {
         holderId: params.holderId,
       };
-      
+
       if (params.includeCollections) {
         queryParams.includeCollections = '1';
       }
-      
-      const response = await this.client.get('/inscriptions/holder-inscriptions', {
-        params: queryParams,
-      });
-      
+
+      const response = await this.client.get(
+        '/inscriptions/holder-inscriptions',
+        {
+          params: queryParams,
+        }
+      );
+
       return response.data;
     } catch (error) {
       this.logger.error('Failed to fetch holder inscriptions:', error);
