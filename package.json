@@ -1,6 +1,6 @@
 {
   "name": "@kiloscribe/inscription-sdk",
-  "version": "1.0.34",
+  "version": "1.0.36",
   "description": "SDK for inscribing files on Hedera",
   "type": "module",
   "files": [
@@ -47,7 +47,7 @@
     "kiloscribe"
   ],
   "author": "Kiloscribe",
-  "license": "MIT",
+  "license": "Apache-2.0",
   "repository": {
     "type": "git",
     "url": "git+https://github.com/kiloscribe/inscription-sdk.git"
@@ -58,14 +58,14 @@
   "homepage": "https://github.com/kiloscribe/inscription-sdk#readme",
   "dependencies": {
     "@hashgraph/hedera-wallet-connect": "^1.5.1-0",
-    "@hashgraphonline/standards-sdk": "^0.0.125",
-    "@hashgraph/sdk": "^2.65.1",
+    "@hashgraphonline/standards-sdk": "^0.0.134",
+    "@hashgraph/sdk": "^2.66.0",
     "axios": "^1.8.4",
     "file-type": "^18.7.0",
     "mime-types": "^2.1.35"
   },
   "devDependencies": {
-    "@kiloscribe/inscription-sdk": "1.0.31",
+    "@kiloscribe/inscription-sdk": "1.0.35",
     "@types/mime-types": "^2.1.4",
     "dotenv": "^16.4.7",
     "rimraf": "^6.0.0",
