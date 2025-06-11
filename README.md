@@ -1,31 +1,45 @@
 # Kiloscribe Inscription SDK
 
-TypeScript/JavaScript SDK for inscribing files on the Hedera network using Kiloscribe's inscription service.
+TypeScript/JavaScript SDK for inscribing files on the Hedera Hashgraph using Kiloscribe's inscription service.
 
 ## Table of Contents
 
-- [Prerequisites](#prerequisites)
-- [Installation](#installation)
-- [Getting Started](#getting-started)
-  - [A. Browser Apps with WalletConnect (Recommended)](#a-browser-apps-with-walletconnect-recommended)
+- [Kiloscribe Inscription SDK](#kiloscribe-inscription-sdk)
+  - [Table of Contents](#table-of-contents)
+  - [Prerequisites](#prerequisites)
+  - [Installation](#installation)
+    - [For Node.js/Backend Projects](#for-nodejsbackend-projects)
+    - [For Browser/Frontend Projects](#for-browserfrontend-projects)
+  - [Getting Started](#getting-started)
+    - [1. Set Up Your Environment](#1-set-up-your-environment)
+    - [2. Choose Your Integration Method](#2-choose-your-integration-method)
+      - [A. Browser Apps with WalletConnect (Recommended)](#a-browser-apps-with-walletconnect-recommended)
   - [B. Loading via HCS-3 Recursion](#b-loading-via-hcs-3-recursion)
-  - [C. Node.js Apps with Private Key](#c-nodejs-apps-with-private-key)
-- [Creating Different Types of Inscriptions](#creating-different-types-of-inscriptions)
-  - [1. Basic File Inscription](#1-basic-file-inscription)
-  - [2. Hashinal NFT](#2-hashinal-nft)
-  - [3. URL Inscription](#3-url-inscription)
-- [Querying Inscriptions](#querying-inscriptions)
-  - [Get Inscriptions](#get-inscriptions)
-- [Checking Inscription Status](#checking-inscription-status)
-  - [1. Simple Status Check](#1-simple-status-check)
-  - [2. Wait for Completion](#2-wait-for-completion)
-- [Examples](#examples)
-  - [Vanilla JavaScript Demo](#vanilla-javascript-demo)
+      - [C. Node.js Apps with Private Key](#c-nodejs-apps-with-private-key)
+  - [Creating Different Types of Inscriptions](#creating-different-types-of-inscriptions)
+    - [1. Basic File Inscription](#1-basic-file-inscription)
+    - [2. Hashinal NFT](#2-hashinal-nft)
+    - [3. URL Inscription](#3-url-inscription)
+  - [Querying Inscriptions](#querying-inscriptions)
+    - [Get Inscriptions](#get-inscriptions)
+    - [Get Holder Inscriptions](#get-holder-inscriptions)
+  - [Checking Inscription Status](#checking-inscription-status)
+    - [1. Simple Status Check](#1-simple-status-check)
+    - [2. Wait for Completion](#2-wait-for-completion)
+  - [Examples](#examples)
+    - [Vanilla JavaScript Demo](#vanilla-javascript-demo)
   - [Try the Interactive Demo](#try-the-interactive-demo)
-- [File Support](#file-support)
-- [Common Issues](#common-issues)
-- [Error Handling](#error-handling)
-- [Support](#support)
+  - [File Support](#file-support)
+    - [Size Limits](#size-limits)
+    - [Supported Formats](#supported-formats)
+  - [Common Issues](#common-issues)
+    - [1. "Account ID not found"](#1-account-id-not-found)
+    - [2. "Transaction failed"](#2-transaction-failed)
+    - [3. "File too large"](#3-file-too-large)
+    - [4. WalletConnect Issues](#4-walletconnect-issues)
+  - [Error Handling](#error-handling)
+  - [Support](#support)
+  - [License](#license)
 
 ## Prerequisites
 
@@ -151,20 +165,20 @@ const result = await sdk.inscribe(
 // Wait for inscription to complete
 const complete = await sdk.waitForInscription(
   result.jobId,
-  30,    // max attempts
-  4000,  // interval in ms
-  true   // check for completion status
+  30, // max attempts
+  4000, // interval in ms
+  true // check for completion status
 );
 
 console.log('Inscription complete:', {
   topic_id: complete.topic_id,
-  status: complete.status
+  status: complete.status,
 });
 ```
 
 ## B. Loading via HCS-3 Recursion
 
-Load the SDK directly from the Hedera network using HCS-3 recursion:
+Load the SDK directly from the Hedera Hashgraph using HCS-3 recursion:
 
 ```html
 <!DOCTYPE html>
@@ -618,45 +632,39 @@ const result = await sdk.inscribe(
 
 ### Get Inscriptions
 
+You can fetch inscriptions by their sequence numbers:
+
 ```typescript
-// Get inscriptions with various filters
+// Get inscription details by sequence number
 const inscriptions = await sdk.getInscriptionNumbers({
-  ht_id: '0.0.123456', // Optional: Filter by token ID
-  sn: 42, // Optional: Filter by serial number
-  inscriptionNumber: 100, // Optional: Get specific inscription
-  sort: 'asc', // Optional: Sort order (asc/desc)
-  random: false, // Optional: Return random results
-  limit: 100, // Optional: Max number of results
+  inscriptionNumber: 1234, // Optional: specific inscription number
+  sort: 'desc', // Optional: 'asc' or 'desc'
+  limit: 10, // Optional: max results to return
 });
 
-// Example response:
-[
-  {
-    sn: 42, // Serial number
-    t_id: '0.0.123456', // Token ID
-    account_id: 123456, // Account ID
-    created_timestamp: '...', // Creation time
-    treasury_account_id: '0.0.789', // Treasury account
-    ht_id: 123456, // Hedera Token ID
-    image: 'https://...', // Image URL
-    inscription_number: 100, // Inscription number
-    json: {
-      // Metadata
-      name: 'My NFT',
-      creator: 'Creator',
-      description: '...',
-      image: 'https://...',
-      type: 'image/png',
-      properties: {
-        compiler: '...',
-      },
-      format: 'HIP412@2.0.0',
-    },
-    mimetype: 'image/png', // File type
-    op: '...', // Operation
-    p: '...', // Protocol
-  },
-];
+console.log(inscriptions);
+```
+
+### Get Holder Inscriptions
+
+You can fetch all inscriptions owned by a specific holder:
+
+```typescript
+// Get all inscriptions for a specific holder
+const holderInscriptions = await sdk.getHolderInscriptions({
+  holderId: '0.0.123456', // Required: Hedera account ID of the holder
+  includeCollections: true, // Optional: Include collection inscriptions
+});
+
+console.log(`Found ${holderInscriptions.length} inscriptions`);
+
+// Access individual inscription details
+holderInscriptions.forEach((inscription) => {
+  console.log(`ID: ${inscription.id}`);
+  console.log(`Status: ${inscription.status}`);
+  console.log(`File URL: ${inscription.fileUrl}`);
+  console.log(`Topic ID: ${inscription.topic_id}`);
+});
 ```
 
 ## Checking Inscription Status
@@ -677,13 +685,14 @@ The `waitForInscription` method will poll until the inscription meets completion
 ```typescript
 const complete = await sdk.waitForInscription(
   result.jobId,
-  30,    // max attempts (optional, default: 30)
-  4000,  // interval in ms (optional, default: 4000)
-  true   // check completion status (optional, default: false)
+  30, // max attempts (optional, default: 30)
+  4000, // interval in ms (optional, default: 4000)
+  true // check completion status (optional, default: false)
 );
 ```
 
 Completion criteria varies by inscription type:
+
 - Regular files: Need `topic_id`
 - Hashinal NFTs: Need both `topic_id` and `jsonTopicId`
 - Dynamic files (HCS-6): Need `topic_id`, `jsonTopicId`, and `registryTopicId`
@@ -813,3 +822,7 @@ Need help? We've got you covered:
 - [Documentation](https://docs.kiloscribe.com) - Full API documentation
 - [Discord](https://discord.gg/kiloscribe) - Community support
 - [Twitter](https://twitter.com/kiloscribe) - Updates and announcements
+
+## License
+
+Apache-2.0
