@@ -43,6 +43,9 @@ export interface StartInscriptionRequest {
 export interface InscriptionResult {
   jobId: string;
   transactionId: string;
+  topicId?: string;
+  status?: string;
+  completed?: boolean;
 }
 
 export interface ImageJobResponse {
@@ -77,6 +80,8 @@ export interface RetrievedInscriptionResult extends ImageJobResponse {
 export interface InscriptionSDKConfig {
   apiKey: string;
   network: Network;
+  wsBaseUrl?: string;
+  connectionMode?: 'http' | 'websocket' | 'auto';
 }
 
 export interface HederaClientConfig {

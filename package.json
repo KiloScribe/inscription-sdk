@@ -1,6 +1,6 @@
 {
   "name": "@kiloscribe/inscription-sdk",
-  "version": "1.0.36",
+  "version": "1.0.45",
   "description": "SDK for inscribing files on Hedera",
   "type": "module",
   "files": [
@@ -36,7 +36,10 @@
     "example:holder": "tsx examples/get-holder-inscriptions.ts",
     "demo:dev": "vite -c demo/vite.config.ts",
     "demo:build": "vite build -c demo/vite.config.ts",
-    "demo:preview": "vite preview -c demo/vite.config.ts"
+    "demo:preview": "vite preview -c demo/vite.config.ts",
+    "test": "jest",
+    "test:watch": "jest --watch",
+    "test:coverage": "jest --coverage"
   },
   "keywords": [
     "hedera",
@@ -58,18 +61,22 @@
   "homepage": "https://github.com/kiloscribe/inscription-sdk#readme",
   "dependencies": {
     "@hashgraph/hedera-wallet-connect": "^1.5.1-0",
-    "@hashgraphonline/standards-sdk": "^0.0.134",
     "@hashgraph/sdk": "^2.66.0",
+    "@hashgraphonline/standards-sdk": "^0.0.138",
     "axios": "^1.8.4",
     "file-type": "^18.7.0",
-    "mime-types": "^2.1.35"
+    "mime-types": "^2.1.35",
+    "socket.io-client": "^4.8.1"
   },
   "devDependencies": {
     "@kiloscribe/inscription-sdk": "1.0.35",
+    "@types/jest": "^29.5.5",
     "@types/mime-types": "^2.1.4",
     "dotenv": "^16.4.7",
+    "jest": "^29.7.0",
     "rimraf": "^6.0.0",
     "terser": "^5.39.0",
+    "ts-jest": "^29.1.1",
     "tsx": "^4.19.3",
     "typescript": "~5.8.2",
     "vite": "^6",

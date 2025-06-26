@@ -22,7 +22,7 @@ export class Auth {
 
   constructor(config: AuthConfig) {
     this.accountId = config.accountId;
-    
+
     // Handle both string and PrivateKey object inputs
     if (typeof config.privateKey === 'string') {
       // Use the key type detector to properly parse the string
@@ -32,7 +32,7 @@ export class Auth {
       // Already a PrivateKey object, use as-is
       this.privateKey = config.privateKey;
     }
-    
+
     this.network = config.network || 'mainnet';
     this.baseUrl = config.baseUrl || 'https://kiloscribe.com';
   }
