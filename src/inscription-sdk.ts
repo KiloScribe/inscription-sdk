@@ -547,22 +547,17 @@ export class InscriptionSDK {
       wsBaseUrl: this.wsBaseUrl,
     });
 
-    if (progressCallback && this.connectionMode !== 'http') {
+    if (this.connectionMode !== 'http') {
       const useWebSocket =
         this.connectionMode === 'websocket' ||
         (this.connectionMode === 'auto' && (await this.detectBestConnection()));
 
       if (useWebSocket) {
         try {
-          this.logger.info('Using WebSocket inscription mode');
           const wsResult = await this.inscribeViaWebSocket(
             request,
             clientConfig,
             progressCallback
-          );
-          this.logger.info(
-            'WebSocket inscription completed successfully',
-            wsResult
           );
           return wsResult;
         } catch (error) {
@@ -642,30 +637,11 @@ export class InscriptionSDK {
 
       if (recommended) {
         this.wsBaseUrl = recommended;
-        const recommendedServer = servers?.find(
-          (s: any) => s.url === recommended
-        );
-        if (recommendedServer) {
-          this.logger.info(
-            `Using recommended WebSocket server: ${recommended} (${
-              recommendedServer.region
-            }, ${recommendedServer.activeJobs || 0} active jobs)`
-          );
-        } else {
-          this.logger.info(
-            `Using recommended WebSocket server: ${recommended}`
-          );
-        }
       } else if (servers && servers.length > 0) {
         const activeServers = servers.filter((s: any) => s.status === 'active');
         if (activeServers.length > 0) {
           const selectedServer = activeServers[0];
           this.wsBaseUrl = selectedServer.url;
-          this.logger.info(
-            `Using WebSocket server: ${selectedServer.url} (${
-              selectedServer.region
-            }, ${selectedServer.activeJobs || 0} active jobs)`
-          );
         }
       }
     } catch (error) {
@@ -720,7 +696,6 @@ export class InscriptionSDK {
         throw new Error('No WebSocket servers available');
       }
       this.wsBaseUrl = recommended;
-      this.logger.info(`Using recommended WebSocket server: ${this.wsBaseUrl}`);
     }
 
     await this.connectWebSocket();
