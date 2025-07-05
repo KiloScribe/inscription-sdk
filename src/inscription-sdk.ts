@@ -1,6 +1,12 @@
 import axios, { AxiosInstance } from 'axios';
-import { Client, PrivateKey, TransferTransaction } from '@hashgraph/sdk';
+import {
+  Client,
+  PrivateKey,
+  Status,
+  Transaction,
+} from '@hashgraph/sdk';
 import { Logger } from './logger';
+import { detectKeyTypeFromString } from './key-type-detector';
 import {
   InscriptionSDKConfig,
   StartInscriptionRequest,
@@ -18,11 +24,10 @@ import {
 } from './types';
 import { DAppSigner } from '@hashgraph/hedera-wallet-connect';
 import { Auth, AuthConfig, AuthResult } from './auth';
-import { detectKeyTypeFromString } from '@hashgraphonline/standards-sdk';
 import { ClientAuth } from './client-auth';
 import * as fileType from 'file-type';
-import { io, Socket } from 'socket.io-client';
 
+// Define progress tracking types directly in this file
 export interface RegistrationProgressData {
   stage: 'preparing' | 'submitting' | 'confirming' | 'completed' | 'verifying';
   message: string;
@@ -38,10 +43,6 @@ export class InscriptionSDK {
   private readonly client: AxiosInstance;
   private readonly config: InscriptionSDKConfig;
   private readonly logger = Logger.getInstance();
-  private socket: Socket | null = null;
-  private socketConnected: boolean = false;
-  private connectionMode: 'http' | 'websocket' | 'auto' = 'auto';
-  private wsBaseUrl: string | null = null;
   private static readonly VALID_MODES = [
     'file',
     'upload',
@@ -139,7 +140,6 @@ export class InscriptionSDK {
     avif: 'image/avif',
     jxl: 'image/jxl',
     weba: 'audio/webm',
-    wasm: 'application/wasm',
   };
 
   constructor(config: InscriptionSDKConfig) {
@@ -163,18 +163,6 @@ export class InscriptionSDK {
       headers,
     });
     this.logger = Logger.getInstance();
-
-    if (config.wsBaseUrl) {
-      this.wsBaseUrl = config.wsBaseUrl;
-    }
-
-    this.connectionMode = config.connectionMode || 'websocket';
-
-    if (!this.wsBaseUrl && this.connectionMode !== 'http') {
-      this.fetchWebSocketServers().catch((err) =>
-        this.logger.warn('Failed to fetch WebSocket servers:', err)
-      );
-    }
   }
 
   private async getFileMetadata(url: string): Promise<FileMetadata> {
@@ -434,52 +422,41 @@ export class InscriptionSDK {
    */
   async executeTransaction(
     transactionBytes: string,
-    clientConfig: HederaClientConfig
+    clientConfig: HederaClientConfig,
   ): Promise<string> {
     try {
+      // Create a client and set the operator using clientConfig
       const client =
         clientConfig.network === 'mainnet'
           ? Client.forMainnet()
           : Client.forTestnet();
 
-      const keyIsString = typeof clientConfig.privateKey === 'string';
-      const keyType = keyIsString
-        ? detectKeyTypeFromString(clientConfig.privateKey as string)
-        : undefined;
+      const key =
+        typeof clientConfig.privateKey === 'string'
+          ? detectKeyTypeFromString(clientConfig.privateKey)
+          : { privateKey: clientConfig.privateKey, detectedType: 'unknown' };
 
-      let privateKey: PrivateKey;
+      client.setOperator(clientConfig.accountId, key.privateKey);
 
-      if (keyIsString) {
-        privateKey =
-          keyType?.detectedType === 'ed25519'
-            ? PrivateKey.fromStringED25519(clientConfig.privateKey as string)
-            : PrivateKey.fromStringECDSA(clientConfig.privateKey as string);
-      } else {
-        privateKey = clientConfig.privateKey as PrivateKey;
-      }
-
-      client.setOperator(clientConfig.accountId, privateKey);
-
-      const transaction = TransferTransaction.fromBytes(
-        Buffer.from(transactionBytes, 'base64')
+      this.logger.debug(
+        `Executing transaction for account ${clientConfig.accountId} on ${clientConfig.network}`,
       );
 
-      const signedTransaction = await transaction.sign(privateKey);
-      const executeTx = await signedTransaction.execute(client);
-      const receipt = await executeTx.getReceipt(client);
-      const status = receipt.status.toString();
+      const transaction = Transaction.fromBytes(
+        Buffer.from(transactionBytes, 'base64'),
+      );
 
-      if (status !== 'SUCCESS') {
-        throw new Error(`Transaction failed with status: ${status}`);
+      const response = await transaction.execute(client);
+      const receipt = await response.getReceipt(client);
+
+      if (receipt.status !== Status.Success) {
+        throw new Error(`Transaction failed with status: ${receipt.status}`);
       }
 
-      return executeTx.transactionId.toString();
-    } catch (error) {
-      throw new Error(
-        `Failed to execute transaction: ${
-          error instanceof Error ? error.message : 'Unknown error'
-        }`
-      );
+      return response.transactionId.toString();
+    } catch (error: any) {
+      this.logger.error('Failed to execute transaction:', error);
+      throw error;
     }
   }
 
@@ -494,11 +471,11 @@ export class InscriptionSDK {
    */
   async executeTransactionWithSigner(
     transactionBytes: string,
-    signer: DAppSigner
+    signer: DAppSigner,
   ): Promise<string> {
     try {
-      const transaction = TransferTransaction.fromBytes(
-        Buffer.from(transactionBytes, 'base64')
+      const transaction = Transaction.fromBytes(
+        Buffer.from(transactionBytes, 'base64'),
       );
 
       const executeTx = await transaction.executeWithSigner(signer);
@@ -529,57 +506,8 @@ export class InscriptionSDK {
    */
   async inscribeAndExecute(
     request: StartInscriptionRequest,
-    clientConfig: HederaClientConfig,
-    progressCallback?: RegistrationProgressCallback,
-    options?: {
-      waitForCompletion?: boolean;
-      maxWaitTime?: number;
-      checkInterval?: number;
-    }
+    clientConfig: HederaClientConfig
   ): Promise<InscriptionResult> {
-    const waitForCompletion = options?.waitForCompletion ?? true;
-    const maxWaitTime = options?.maxWaitTime ?? 120000;
-    const checkInterval = options?.checkInterval ?? 2000;
-
-    this.logger.debug('inscribeAndExecute called', {
-      hasProgressCallback: !!progressCallback,
-      connectionMode: this.connectionMode,
-      wsBaseUrl: this.wsBaseUrl,
-    });
-
-    if (this.connectionMode !== 'http') {
-      const useWebSocket =
-        this.connectionMode === 'websocket' ||
-        (this.connectionMode === 'auto' && (await this.detectBestConnection()));
-
-      if (useWebSocket) {
-        try {
-          const wsResult = await this.inscribeViaWebSocket(
-            request,
-            clientConfig,
-            progressCallback
-          );
-          return wsResult;
-        } catch (error) {
-          this.logger.error(
-            'WebSocket inscription failed, falling back to HTTP:',
-            error
-          );
-          throw error;
-        }
-      } else {
-        this.logger.info(
-          `Not using WebSocket: useWebSocket=${useWebSocket}, wsBaseUrl=${this.wsBaseUrl}`
-        );
-      }
-    } else {
-      this.logger.info(
-        `Not using WebSocket: hasCallback=${!!progressCallback}, connectionMode=${
-          this.connectionMode
-        }`
-      );
-    }
-
     const inscriptionResponse = await this.startInscription(request);
 
     if (!inscriptionResponse.transactionBytes) {
@@ -595,305 +523,14 @@ export class InscriptionSDK {
       inscriptionResponse.transactionBytes,
       clientConfig
     );
+    
+    // If fallback was used, the Kiloscribe jobId is invalid. Use the new txId instead.
+    const jobId = transactionId.replace(/[@.-]/g, '');
 
-    const result = {
-      jobId: inscriptionResponse.tx_id,
+    return {
+      jobId: jobId,
       transactionId,
     };
-
-    if (waitForCompletion) {
-      if (progressCallback) {
-        progressCallback({
-          stage: 'confirming',
-          message: 'Transaction executed, waiting for inscription to complete',
-          progressPercent: 5,
-        });
-      }
-
-      const maxAttempts = Math.floor(maxWaitTime / checkInterval);
-      const finalResult = await this.waitForInscription(
-        transactionId,
-        maxAttempts,
-        checkInterval,
-        true,
-        progressCallback
-      );
-
-      return {
-        ...result,
-        topicId: finalResult.topic_id,
-        status: finalResult.status,
-        completed: finalResult.completed,
-      };
-    }
-
-    return result;
-  }
-
-  private async fetchWebSocketServers(): Promise<void> {
-    try {
-      const response = await this.client.get('/inscriptions/websocket-servers');
-      const { servers, recommended } = response.data;
-
-      if (recommended) {
-        this.wsBaseUrl = recommended;
-      } else if (servers && servers.length > 0) {
-        const activeServers = servers.filter((s: any) => s.status === 'active');
-        if (activeServers.length > 0) {
-          const selectedServer = activeServers[0];
-          this.wsBaseUrl = selectedServer.url;
-        }
-      }
-    } catch (error) {
-      this.logger.debug(
-        'Could not fetch WebSocket servers, will use HTTP only'
-      );
-    }
-  }
-
-  private async detectBestConnection(): Promise<boolean> {
-    if (!this.wsBaseUrl) return false;
-
-    try {
-      const testSocket = io(this.wsBaseUrl, {
-        auth: { apiKey: this.config.apiKey },
-        transports: ['websocket'],
-        timeout: 3000,
-      });
-
-      return new Promise((resolve) => {
-        const timeout = setTimeout(() => {
-          testSocket.disconnect();
-          resolve(false);
-        }, 3000);
-
-        testSocket.on('connect', () => {
-          clearTimeout(timeout);
-          testSocket.disconnect();
-          resolve(true);
-        });
-
-        testSocket.on('connect_error', () => {
-          clearTimeout(timeout);
-          testSocket.disconnect();
-          resolve(false);
-        });
-      });
-    } catch (e) {
-      return false;
-    }
-  }
-
-  private async inscribeViaWebSocket(
-    request: StartInscriptionRequest,
-    clientConfig: HederaClientConfig,
-    progressCallback?: RegistrationProgressCallback
-  ): Promise<InscriptionResult> {
-    if (!this.wsBaseUrl) {
-      const response = await this.client.get('/inscriptions/websocket-servers');
-      const recommended = response.data.recommended;
-      if (!recommended) {
-        throw new Error('No WebSocket servers available');
-      }
-      this.wsBaseUrl = recommended;
-    }
-
-    await this.connectWebSocket();
-
-    return new Promise((resolve, reject) => {
-      if (!this.socket) {
-        return reject(new Error('WebSocket not connected'));
-      }
-
-      let jobId: string;
-      let transactionId: string;
-      let topicId: string | undefined;
-      let timeoutHandle: NodeJS.Timeout;
-
-      const cleanup = () => {
-        if (timeoutHandle) clearTimeout(timeoutHandle);
-        this.socket?.off('inscription-progress', progressHandler);
-        this.socket?.off('inscription-complete', completeHandler);
-        this.socket?.off('inscription-error', errorHandler);
-      };
-
-      const TIMEOUT_MS = 60000;
-      timeoutHandle = setTimeout(() => {
-        this.logger.error(
-          `WebSocket inscription timeout after ${TIMEOUT_MS / 1000} seconds`,
-          {
-            jobId,
-            transactionId,
-            lastTopicId: topicId,
-          }
-        );
-        cleanup();
-        resolve({
-          jobId,
-          transactionId,
-          topicId,
-          status: 'timeout',
-          completed: false,
-        });
-      }, TIMEOUT_MS);
-
-      const completeHandler = (data: any) => {
-        cleanup();
-        resolve({
-          jobId,
-          transactionId,
-          topicId: data.topicId || data.topic_id,
-          status: 'completed',
-          completed: true,
-        });
-      };
-
-      const errorHandler = (data: any) => {
-        cleanup();
-        reject(new Error(data.error || 'Inscription failed'));
-      };
-
-      const progressHandler = (data: any) => {
-        this.logger.info('Progress event received:', {
-          jobId: data.jobId,
-          status: data.status,
-          progress: data.progress,
-          topicId: data.topicId || data.topic_id,
-        });
-
-        if (data.topicId || data.topic_id) {
-          topicId = data.topicId || data.topic_id;
-        }
-
-        if (progressCallback) {
-          progressCallback({
-            stage: data.status === 'completed' ? 'completed' : 'confirming',
-            message: `Processing inscription: ${data.status}`,
-            progressPercent: data.progress || 0,
-            details: data,
-          });
-        }
-
-        if (data.status === 'completed' || data.progress === 100) {
-          this.logger.info('Inscription completed via progress handler', {
-            status: data.status,
-            progress: data.progress,
-            topicId: data.topicId || data.topic_id || topicId,
-          });
-          cleanup();
-          resolve({
-            jobId,
-            transactionId,
-            topicId: data.topicId || data.topic_id || topicId,
-            status: 'completed',
-            completed: true,
-          });
-        }
-      };
-
-      this.socket.on('inscription-progress', progressHandler);
-      this.socket.on('inscription-complete', completeHandler);
-      this.socket.on('inscription-error', errorHandler);
-
-      this.socket.emit(
-        'start-inscription',
-        {
-          ...request,
-          network: this.config.network,
-        },
-        async (response: any) => {
-          if (!response.success) {
-            cleanup();
-            return reject(new Error(response.error || 'Inscription failed'));
-          }
-
-          try {
-            if (!response.transactionBytes) {
-              throw new Error(
-                'No transaction bytes returned from WebSocket inscription'
-              );
-            }
-
-            transactionId = await this.executeTransaction(
-              response.transactionBytes,
-              clientConfig
-            );
-
-            jobId = response.jobId || response.tx_id;
-            if (!jobId) {
-              throw new Error('No job ID returned from WebSocket inscription');
-            }
-
-            if (progressCallback) {
-              progressCallback({
-                stage: 'confirming',
-                message: 'Transaction executed, inscribing to HCS...',
-                progressPercent: 5,
-              });
-            }
-
-            this.logger.info(
-              'Transaction executed, waiting for inscription completion...',
-              {
-                jobId,
-                transactionId,
-              }
-            );
-          } catch (error) {
-            cleanup();
-            reject(error);
-          }
-        }
-      );
-    });
-  }
-
-  private async connectWebSocket(): Promise<void> {
-    if (this.socketConnected && this.socket) return;
-
-    if (!this.wsBaseUrl) {
-      throw new Error('WebSocket URL not configured');
-    }
-
-    return new Promise((resolve, reject) => {
-      this.socket = io(this.wsBaseUrl!, {
-        auth: { apiKey: this.config.apiKey },
-        transports: ['websocket', 'polling'],
-      });
-
-      const timeout = setTimeout(() => {
-        reject(new Error('WebSocket connection timeout'));
-      }, 10000);
-
-      this.socket.on('connect', () => {
-        clearTimeout(timeout);
-        this.socketConnected = true;
-        this.logger.info('WebSocket connected');
-        resolve();
-      });
-
-      this.socket.on('connect_error', (error) => {
-        clearTimeout(timeout);
-        this.socketConnected = false;
-        reject(new Error(`WebSocket connection failed: ${error.message}`));
-      });
-
-      this.socket.on('disconnect', () => {
-        this.socketConnected = false;
-        this.logger.info('WebSocket disconnected');
-      });
-    });
-  }
-
-  /**
-   * Disconnects the WebSocket connection if active
-   */
-  disconnect(): void {
-    if (this.socket) {
-      this.socket.disconnect();
-      this.socket = null;
-      this.socketConnected = false;
-    }
   }
 
   /**
@@ -1026,17 +663,13 @@ export class InscriptionSDK {
           signer: DAppSigner;
           network?: 'mainnet' | 'testnet';
           baseUrl?: string;
-          wsBaseUrl?: string;
-          connectionMode?: 'http' | 'websocket' | 'auto';
         }
       | {
           type: 'server';
           accountId: string;
-          privateKey: string | PrivateKey;
+          privateKey: PrivateKey;
           network?: 'mainnet' | 'testnet';
           baseUrl?: string;
-          wsBaseUrl?: string;
-          connectionMode?: 'http' | 'websocket' | 'auto';
         }
   ): Promise<InscriptionSDK> {
     const auth =
@@ -1052,15 +685,13 @@ export class InscriptionSDK {
     return new InscriptionSDK({
       apiKey,
       network: config.network || 'mainnet',
-      wsBaseUrl: config.wsBaseUrl,
-      connectionMode: config.connectionMode || 'websocket',
     });
   }
 
   async waitForInscription(
     txId: string,
-    maxAttempts: number = 30,
-    intervalMs: number = 4000,
+    maxAttempts: number = 60,
+    intervalMs: number = 6000,
     checkCompletion: boolean = false,
     progressCallback?: RegistrationProgressCallback
   ): Promise<RetrievedInscriptionResult> {

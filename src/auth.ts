@@ -1,7 +1,7 @@
 import { PrivateKey } from '@hashgraph/sdk';
 import axios from 'axios';
 import { Buffer } from 'buffer';
-import { detectKeyTypeFromString } from '@hashgraphonline/standards-sdk';
+import { detectKeyTypeFromString } from './key-type-detector';
 
 export interface AuthConfig {
   accountId: string;
@@ -21,12 +21,14 @@ export class Auth {
   private readonly network: string;
 
   constructor(config: AuthConfig) {
+    console.log('config', config);
     this.accountId = config.accountId;
 
     // Handle both string and PrivateKey object inputs
     if (typeof config.privateKey === 'string') {
       // Use the key type detector to properly parse the string
       const keyDetection = detectKeyTypeFromString(config.privateKey);
+      console.log('keyDetection', keyDetection);
       this.privateKey = keyDetection.privateKey;
     } else {
       // Already a PrivateKey object, use as-is

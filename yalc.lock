@@ -1,0 +1,9 @@
+{
+  "version": "v1",
+  "packages": {
+    "@hashgraphonline/standards-sdk": {
+      "signature": "30bf0cb6643eb559194a48046831de99",
+      "file": true
+    }
+  }
+}
