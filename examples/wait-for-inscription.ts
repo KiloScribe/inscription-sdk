@@ -26,6 +26,7 @@ async function main() {
       accountId,
       privateKey,
       network: 'testnet',
+      type: 'server',
     });
 
     const imagePath = join(__dirname, 'assets', 'example.webp');
