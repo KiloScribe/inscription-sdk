@@ -1,4 +1,5 @@
 import { PrivateKey } from '@hashgraph/sdk';
+import { KeyType } from './key-type-detector';
 
 export type Network = 'mainnet' | 'testnet';
 
@@ -88,6 +89,7 @@ export interface HederaClientConfig {
   accountId: string;
   privateKey: string | PrivateKey;
   network: Network;
+  keyType?: KeyType;
 }
 
 export interface FileMetadata {

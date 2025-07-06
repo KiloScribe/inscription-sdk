@@ -8,6 +8,7 @@ export interface AuthConfig {
   privateKey: string | PrivateKey;
   network?: 'mainnet' | 'testnet';
   baseUrl?: string;
+  keyType?: 'ed25519' | 'ecdsa';
 }
 
 export interface AuthResult {
@@ -27,7 +28,7 @@ export class Auth {
     // Handle both string and PrivateKey object inputs
     if (typeof config.privateKey === 'string') {
       // Use the key type detector to properly parse the string
-      const keyDetection = detectKeyTypeFromString(config.privateKey);
+      const keyDetection = detectKeyTypeFromString(config.privateKey, config.keyType);
       console.log('keyDetection', keyDetection);
       this.privateKey = keyDetection.privateKey;
     } else {
