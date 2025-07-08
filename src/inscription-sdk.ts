@@ -450,21 +450,17 @@ export class InscriptionSDK {
       const type = account?.key?._type;
 
       const keyIsString = typeof clientConfig.privateKey === 'string';
-
       let privateKey: PrivateKey;
 
-      if (type && keyIsString) {
-        privateKey = type?.toLowerCase()?.includes('ecdsa')
-          ? PrivateKey.fromStringECDSA(clientConfig.privateKey as string)
-          : PrivateKey.fromStringED25519(clientConfig.privateKey as string);
-      } else if (!type && keyIsString) {
-        const keyType = keyIsString
-          ? detectKeyTypeFromString(clientConfig.privateKey as string)
-          : undefined;
-        privateKey =
-          keyType?.detectedType === 'ed25519'
-            ? PrivateKey.fromStringED25519(clientConfig.privateKey as string)
-            : PrivateKey.fromStringECDSA(clientConfig.privateKey as string);
+      if (keyIsString) {
+        // Use the enhanced key type detection with confidence level
+        const keyDetection = detectKeyTypeFromString(clientConfig.privateKey as string);
+        
+        if (keyDetection.warning && keyDetection.privateKey) {
+          this.logger.warn(`Key type detection warning: ${keyDetection.warning}`);
+        }
+        
+        privateKey = keyDetection.privateKey;
       } else {
         privateKey = clientConfig.privateKey as PrivateKey;
       }
