@@ -65,6 +65,7 @@
     "@hashgraphonline/standards-sdk": "^0.0.146",
     "axios": "^1.8.4",
     "buffer": "^6.0.3",
+    "date-fns": "^4.1.0",
     "ethers": "^6.15.0",
     "file-type": "^18.7.0",
     "mime-types": "^2.1.35",
