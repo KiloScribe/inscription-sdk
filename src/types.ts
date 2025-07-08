@@ -44,6 +44,7 @@ export interface InscriptionResult {
   jobId: string;
   transactionId: string;
   topicId?: string;
+  topic_id?: string;
   status?: string;
   completed?: boolean;
 }

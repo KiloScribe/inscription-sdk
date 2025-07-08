@@ -18,7 +18,10 @@ import {
 } from './types';
 import { DAppSigner } from '@hashgraph/hedera-wallet-connect';
 import { Auth, AuthConfig, AuthResult } from './auth';
-import { detectKeyTypeFromString } from '@hashgraphonline/standards-sdk';
+import {
+  detectKeyTypeFromString,
+  HederaMirrorNode,
+} from '@hashgraphonline/standards-sdk';
 import { ClientAuth } from './client-auth';
 import * as fileType from 'file-type';
 import { io, Socket } from 'socket.io-client';
@@ -442,14 +445,22 @@ export class InscriptionSDK {
           ? Client.forMainnet()
           : Client.forTestnet();
 
+      const mirrorNode = new HederaMirrorNode(clientConfig.network);
+      const account = await mirrorNode.requestAccount(clientConfig.accountId);
+      const type = account?.key?._type;
+
       const keyIsString = typeof clientConfig.privateKey === 'string';
-      const keyType = keyIsString
-        ? detectKeyTypeFromString(clientConfig.privateKey as string)
-        : undefined;
 
       let privateKey: PrivateKey;
 
-      if (keyIsString) {
+      if (type && keyIsString) {
+        privateKey = type?.toLowerCase()?.includes('ecdsa')
+          ? PrivateKey.fromStringECDSA(clientConfig.privateKey as string)
+          : PrivateKey.fromStringED25519(clientConfig.privateKey as string);
+      } else if (!type && keyIsString) {
+        const keyType = keyIsString
+          ? detectKeyTypeFromString(clientConfig.privateKey as string)
+          : undefined;
         privateKey =
           keyType?.detectedType === 'ed25519'
             ? PrivateKey.fromStringED25519(clientConfig.privateKey as string)
@@ -732,6 +743,7 @@ export class InscriptionSDK {
           jobId,
           transactionId,
           topicId,
+          topic_id: topicId,
           status: 'timeout',
           completed: false,
         });
@@ -743,6 +755,7 @@ export class InscriptionSDK {
           jobId,
           transactionId,
           topicId: data.topicId || data.topic_id,
+          topic_id: data.topicId || data.topic_id,
           status: 'completed',
           completed: true,
         });
@@ -754,11 +767,12 @@ export class InscriptionSDK {
       };
 
       const progressHandler = (data: any) => {
-        this.logger.info('Progress event received:', {
+        this.logger.debug('Progress event received:', {
           jobId: data.jobId,
           status: data.status,
           progress: data.progress,
           topicId: data.topicId || data.topic_id,
+          topic_id: data.topicId || data.topic_id,
         });
 
         if (data.topicId || data.topic_id) {
@@ -779,12 +793,14 @@ export class InscriptionSDK {
             status: data.status,
             progress: data.progress,
             topicId: data.topicId || data.topic_id || topicId,
+            topic_id: data.topicId || data.topic_id || topicId,
           });
           cleanup();
           resolve({
             jobId,
             transactionId,
             topicId: data.topicId || data.topic_id || topicId,
+            topic_id: data.topicId || data.topic_id || topicId,
             status: 'completed',
             completed: true,
           });
