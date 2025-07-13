@@ -1,4 +1,4 @@
-import { InscriptionSDK } from '@kiloscribe/inscription-sdk';
+import { InscriptionSDK } from '../src/inscription-sdk';
 import dotenv from 'dotenv';
 import { sdkConfig, hederaConfig, inscriptionConfig } from './config';
 
@@ -17,6 +17,7 @@ async function main() {
   try {
     console.log('Initializing Inscription SDK...');
     const sdk = await InscriptionSDK.createWithAuth({
+      type: 'server',
       accountId,
       privateKey,
       network: 'testnet',
