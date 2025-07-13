@@ -62,7 +62,7 @@
   "dependencies": {
     "@hashgraph/hedera-wallet-connect": "^1.5.1-0",
     "@hashgraph/sdk": "^2.67.0",
-    "@hashgraphonline/standards-sdk": "^0.0.146",
+    "@hashgraphonline/standards-sdk": "^0.0.155",
     "axios": "^1.8.4",
     "buffer": "^6.0.3",
     "date-fns": "^4.1.0",

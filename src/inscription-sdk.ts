@@ -572,7 +572,7 @@ export class InscriptionSDK {
             'WebSocket inscription failed, falling back to HTTP:',
             error
           );
-          throw error;
+            // Continue to HTTP fallback below instead of throwing
         }
       } else {
         this.logger.info(
