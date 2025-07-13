@@ -3,13 +3,18 @@
 ## Test Results for `wss://inscribe.kiloscribe.com` and Backend Servers
 
 ### Summary
-❌ **All WebSocket connections are failing with HTTP 308 (Permanent Redirect) responses**
+🔍 **Critical Discovery: The SDK uses Socket.IO, not plain WebSocket**
+❌ **All plain WebSocket connection attempts fail due to protocol mismatch**
+🔧 **Backend servers returning HTTP 502 Bad Gateway after Cloudflare disabled**
 
 ### Tested Endpoints
 1. `wss://inscribe.kiloscribe.com` (load balancer)
 2. `wss://inscribe-1.kiloscribe.com` (backend 1)
 3. `wss://inscribe-2.kiloscribe.com` (backend 2)
 4. `wss://inscribe-3.kiloscribe.com` (backend 3)
+
+### Key Finding: Socket.IO vs Plain WebSocket
+**The SDK uses Socket.IO, not plain WebSocket.** This explains the connection failures - I was testing with the wrong protocol.
 
 ### Test Details
 
@@ -39,36 +44,63 @@ wscat -c wss://inscribe-1.kiloscribe.com
 
 ### Root Cause Analysis
 
-#### Primary Issue: HTTP 308 Redirects
-All WebSocket upgrade attempts return **HTTP 308 (Permanent Redirect)**, which indicates:
-1. The server is not recognizing WebSocket upgrade requests
-2. The WebSocket endpoint might be at a different path
-3. Caddy configuration may not be properly handling WebSocket upgrades
-4. Backend servers may not have WebSocket support enabled
+#### Primary Issue: Protocol Mismatch
+The connection failures occur because:
+1. **The SDK uses Socket.IO, not plain WebSocket**
+2. Socket.IO uses a different handshake protocol than raw WebSocket
+3. Plain WebSocket clients cannot connect to Socket.IO servers
+4. The server expects Socket.IO connections with proper authentication
 
-#### Secondary Issue: User-Specific Timeouts
-Since it works for other users but not one specific user, the issue is likely:
-1. **Network-level blocking** at the user's location
-2. **Caddy load balancing** routing the problematic user to a specific backend that's having issues
-3. **Cloudflare routing** differences based on geographic location
+**From SDK Analysis:**
+```javascript
+// The SDK connects like this:
+this.socket = io(this.wsBaseUrl, {
+  auth: { apiKey: this.config.apiKey },
+  transports: ['websocket', 'polling'],
+});
+```
+
+#### Secondary Issue: Backend Server Connectivity
+With Cloudflare disabled, backend servers return **HTTP 502 Bad Gateway**:
+1. **502 errors suggest backend servers may be down/unreachable**
+2. **Caddy load balancer cannot reach backend instances**
+3. **This explains why one user experiences timeouts**
+
+#### API Discovery
+The SDK fetches WebSocket server URLs from: `/inscriptions/websocket-servers`
+```json
+{
+  "servers": [
+    {
+      "url": "wss://inscribe.kiloscribe.com",
+      "region": "us-east",
+      "status": "active",
+      "priority": 1,
+      "activeJobs": 0
+    }
+  ],
+  "recommended": "wss://inscribe.kiloscribe.com"
+}
+```
 
 ### Recommendations
 
 #### Immediate Actions
-1. **Check Caddy Configuration**:
-   - Verify WebSocket proxying is enabled in Caddy config
-   - Ensure `upgrade` and `connection` headers are properly handled
-   - Check if WebSocket endpoint path is correctly configured
+1. **Fix Backend Server Issues**:
+   - **Check if backend servers (inscribe-1, inscribe-2, inscribe-3) are running**
+   - **Verify Socket.IO service is active on all backend instances**
+   - **Test direct Socket.IO connections to backend servers**
+   - **Check backend server logs for errors**
 
-2. **Backend Server Verification**:
-   - Confirm all backend servers (1-3) have WebSocket support enabled
-   - Test WebSocket functionality directly on backend servers (bypass Cloudflare)
-   - Check if WebSocket service is running on all backends
+2. **Caddy Configuration for Socket.IO**:
+   - Ensure Caddy properly proxies Socket.IO connections
+   - Verify Socket.IO polling and WebSocket transports are supported
+   - Check if sticky sessions are configured for Socket.IO
 
-3. **Cloudflare Settings**:
-   - Verify WebSocket proxying is enabled in Cloudflare
-   - Check if there are any geographic routing issues
-   - Consider temporarily bypassing Cloudflare for testing
+3. **Re-enable Cloudflare Correctly**:
+   - Enable WebSocket proxying in Cloudflare settings
+   - Ensure Socket.IO polling requests are handled properly
+   - Test both WebSocket and HTTP polling transports
 
 #### User-Specific Troubleshooting
 1. **Network Diagnostics**:
@@ -97,11 +129,21 @@ Since it works for other users but not one specific user, the issue is likely:
    - Add proper error handling for WebSocket upgrade failures
 
 ### Status
-🔴 **Critical**: WebSocket endpoint is not functional - all connection attempts fail with 308 redirects
-🟡 **User Issue**: One user experiencing timeouts (likely related to primary issue)
+� **Root Cause Identified**: Protocol mismatch - server uses Socket.IO, not plain WebSocket
+🔴 **Critical**: Backend servers returning 502 Bad Gateway errors
+🟡 **User Issue**: One user experiencing timeouts due to backend connectivity issues
 
 ### Next Steps
-1. Review and fix Caddy WebSocket configuration
-2. Verify backend server WebSocket setup
-3. Test direct backend connections (bypass Cloudflare)
-4. Implement proper WebSocket upgrade handling
+1. **Restart/check backend servers (inscribe-1, inscribe-2, inscribe-3)**
+2. **Verify Socket.IO service is running on all backends**  
+3. **Test Socket.IO connections with proper authentication**
+4. **Configure Caddy for Socket.IO load balancing with sticky sessions**
+5. **Re-enable Cloudflare with proper Socket.IO support**
+
+### For the Affected User
+The timeout issue is likely caused by:
+1. **Backend server unavailability** (502 errors confirm this)
+2. **Load balancer routing to a failed backend instance**
+3. **Socket.IO connection state not being maintained properly**
+
+**Recommended fix**: Once backend servers are restored, the user's connection issues should resolve.
