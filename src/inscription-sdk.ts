@@ -511,15 +511,12 @@ export class InscriptionSDK {
       const transaction = TransferTransaction.fromBytes(
         Buffer.from(transactionBytes, 'base64')
       );
-
       const executeTx = await transaction.executeWithSigner(signer);
       const receipt = await executeTx.getReceiptWithSigner(signer);
       const status = receipt.status.toString();
-
       if (status !== 'SUCCESS') {
         throw new Error(`Transaction failed with status: ${status}`);
       }
-
       return executeTx.transactionId.toString();
     } catch (error) {
       throw new Error(
