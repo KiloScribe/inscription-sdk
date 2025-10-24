@@ -1,6 +1,6 @@
 {
   "name": "@kiloscribe/inscription-sdk",
-  "version": "1.0.60",
+  "version": "1.0.61",
   "description": "SDK for inscribing files on Hedera",
   "type": "module",
   "files": [
@@ -60,9 +60,9 @@
   },
   "homepage": "https://github.com/kiloscribe/inscription-sdk#readme",
   "dependencies": {
-    "@hashgraph/hedera-wallet-connect": "^1.5.1-0",
-    "@hashgraph/sdk": "^2.72.0",
-    "@hashgraphonline/standards-sdk": "^0.0.187",
+    "@hashgraph/hedera-wallet-connect": "2.0.3",
+    "@hashgraph/sdk": "^2.75.0",
+    "@hashgraphonline/standards-sdk": "^0.1.119",
     "axios": "^1.11.0",
     "date-fns": "^4.1.0",
     "file-type": "^21.0.0",
