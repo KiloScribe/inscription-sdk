@@ -1,6 +1,6 @@
 {
   "name": "@kiloscribe/inscription-sdk",
-  "version": "1.0.61",
+  "version": "2.0.1",
   "description": "SDK for inscribing files on Hedera",
   "type": "module",
   "files": [
@@ -25,7 +25,7 @@
     "clean": "rimraf dist",
     "build:es": "BUILD_FORMAT=es vite build",
     "build:umd": "BUILD_FORMAT=umd vite build",
-    "build": "npm run clean && npm run build:umd && npm run build:es",
+    "build": "NODE_OPTIONS=--max-old-space-size=8192 npm run clean && npm run build:umd && npm run build:es",
     "release": "npm publish --access public",
     "preview": "vite preview",
     "example:file": "tsx examples/inscribe-file.ts",
@@ -62,14 +62,17 @@
   "dependencies": {
     "@hashgraph/hedera-wallet-connect": "2.0.3",
     "@hashgraph/sdk": "^2.75.0",
-    "@hashgraphonline/standards-sdk": "^0.1.119",
     "axios": "^1.11.0",
     "date-fns": "^4.1.0",
     "file-type": "^21.0.0",
     "mime-types": "^3",
     "socket.io-client": "^4.8.1"
   },
+  "peerDependencies": {
+    "@hashgraphonline/standards-sdk": "^0.1.132"
+  },
   "devDependencies": {
+    "@hashgraphonline/standards-sdk": "^0.1.132",
     "@types/jest": "^29.5.5",
     "@types/mime-types": "^2.1.4",
     "dotenv": "^16.4.7",

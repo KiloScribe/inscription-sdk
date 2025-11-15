@@ -12,6 +12,7 @@ export default defineConfig(({ mode }) => {
   const externalDependencies = [
     '@hashgraph/proto',
     '@hashgraph/sdk',
+    '@hashgraphonline/standards-sdk',
     'fetch-retry',
   ];
 
@@ -41,7 +42,7 @@ export default defineConfig(({ mode }) => {
         formats: [format],
       },
       rollupOptions: {
-        external: format === 'es' ? externalDependencies : [],
+        external: externalDependencies,
         output: {
           globals: (id) => id,
         },
