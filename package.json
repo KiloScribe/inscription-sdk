@@ -1,6 +1,6 @@
 {
   "name": "@kiloscribe/inscription-sdk",
-  "version": "2.0.1",
+  "version": "2.0.4",
   "description": "SDK for inscribing files on Hedera",
   "type": "module",
   "files": [
@@ -60,8 +60,7 @@
   },
   "homepage": "https://github.com/kiloscribe/inscription-sdk#readme",
   "dependencies": {
-    "@hashgraph/hedera-wallet-connect": "2.0.3",
-    "@hashgraph/sdk": "^2.75.0",
+    "@hashgraph/hedera-wallet-connect": "2.0.4-canary.3ca04e9.0",
     "axios": "^1.11.0",
     "date-fns": "^4.1.0",
     "file-type": "^21.0.0",
@@ -69,10 +68,16 @@
     "socket.io-client": "^4.8.1"
   },
   "peerDependencies": {
-    "@hashgraphonline/standards-sdk": "^0.1.132"
+    "@hashgraphonline/standards-sdk": "^0.1.141-canary.25",
+    "@hashgraph/sdk": "^2.77.0"
+  },
+  "resolutions": {
+    "@hashgraphonline/standards-sdk": "^0.1.141-canary.25",
+    "@hashgraph/sdk": "^2.77.0"
   },
   "devDependencies": {
-    "@hashgraphonline/standards-sdk": "^0.1.132",
+    "@hashgraphonline/standards-sdk": "^0.1.141-canary.25",
+    "@hashgraph/sdk": "^2.77.0",
     "@types/jest": "^29.5.5",
     "@types/mime-types": "^2.1.4",
     "dotenv": "^16.4.7",

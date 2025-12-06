@@ -982,9 +982,12 @@ export class InscriptionSDK {
     }
 
     try {
+      const formattedTransactionId = txId.includes('@')
+        ? `${txId.split('@')[0]}-${txId.split('@')[1].replace(/\./g, '-')}`
+        : txId;
       return await this.retryWithBackoff(async () => {
         const response = await this.client.get(
-          `/inscriptions/retrieve-inscription?id=${txId}`
+          `/inscriptions/retrieve-inscription?id=${formattedTransactionId}`
         );
         const result = response.data as ImageJobResponse;
         return { ...result, jobId: result.id };
