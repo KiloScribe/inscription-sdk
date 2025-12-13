@@ -10,6 +10,10 @@
     <div class="container">
         <h1>Inscription SDK Demo</h1>
         <div class="upload-section">
+            <select id="modeSelect">
+                <option value="file" selected>File (HCS-1)</option>
+                <option value="hashinal-collection">Hashinal Collection (ZIP)</option>
+            </select>
             <input type="file" id="fileInput" accept="image/*">
             <button id="connectButton">Connect Wallet</button>
             <button id="inscribeButton" disabled>Inscribe</button>

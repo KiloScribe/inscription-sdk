@@ -1,6 +1,7 @@
 import { InscriptionSDK } from '@kiloscribe/inscription-sdk';
 import { HashinalsWalletConnectSDK } from '@hashgraphonline/hashinal-wc';
 import { LedgerId } from '@hashgraph/sdk';
+import JSZip from 'jszip';
 
 type WalletState = {
   accountId: string;
@@ -24,6 +25,7 @@ const sdk = new InscriptionSDK({
 
 const wallet = new HashinalsWalletConnectSDK();
 
+const modeSelect = document.getElementById('modeSelect') as HTMLSelectElement;
 const fileInput = document.getElementById('fileInput') as HTMLInputElement;
 const connectButton = document.getElementById(
   'connectButton'
@@ -37,6 +39,71 @@ const previewDiv = document.getElementById('preview') as HTMLDivElement;
 const updateStatus = (message: string, isError = false) => {
   statusDiv.textContent = message;
   statusDiv.className = `status ${isError ? 'error' : 'success'}`;
+};
+
+const getSelectedMode = (): 'file' | 'hashinal-collection' => {
+  const value = modeSelect?.value;
+  return value === 'hashinal-collection' ? 'hashinal-collection' : 'file';
+};
+
+const createHashinalCollectionZipBase64 = async (
+  base64Image: string,
+  imageFile: File,
+  creator: string
+): Promise<string> => {
+  const zip = new JSZip();
+  const images = zip.folder('images');
+  const metadata = zip.folder('metadata');
+  const secondaryImages1 = zip.folder('secondary_images_1');
+
+  if (!images || !metadata || !secondaryImages1) {
+    throw new Error('Failed to create collection ZIP folders');
+  }
+
+  const extension =
+    imageFile.name.toLowerCase().split('.').pop()?.trim() || 'png';
+
+  images.file(`1.${extension}`, base64Image, { base64: true });
+  images.file(`2.${extension}`, base64Image, { base64: true });
+  secondaryImages1.file(`1.${extension}`, base64Image, { base64: true });
+  secondaryImages1.file(`2.${extension}`, base64Image, { base64: true });
+
+  const baseMetadata = {
+    format: 'HIP412@2.0.0',
+    type: imageFile.type || 'application/octet-stream',
+    creator,
+    image: '',
+    attributes: [],
+    files: [],
+  };
+
+  metadata.file(
+    '1.json',
+    JSON.stringify(
+      {
+        ...baseMetadata,
+        name: 'Demo Collection #1',
+        description: 'Demo Hashinal collection item #1',
+      },
+      null,
+      2
+    )
+  );
+
+  metadata.file(
+    '2.json',
+    JSON.stringify(
+      {
+        ...baseMetadata,
+        name: 'Demo Collection #2',
+        description: 'Demo Hashinal collection item #2',
+      },
+      null,
+      2
+    )
+  );
+
+  return zip.generateAsync({ type: 'base64' });
 };
 
 const handleConnect = async () => {
@@ -87,7 +154,6 @@ const handleInscribe = async () => {
 
   try {
     inscribeButton.disabled = true;
-    console.log('Inscribing file...');
     updateStatus('Preparing file for inscription...');
 
     const reader = new FileReader();
@@ -98,29 +164,52 @@ const handleInscribe = async () => {
         const dAppSigner = wallet.dAppConnector.signers.find((signer) => {
           return signer.getAccountId().toString() === state.accountId;
         })!;
+
+        const mode = getSelectedMode();
+        const fileName =
+          mode === 'hashinal-collection' ? 'collection.zip' : file.name;
+        const fileBase64 =
+          mode === 'hashinal-collection'
+            ? await createHashinalCollectionZipBase64(base64, file, state.accountId)
+            : base64;
+
         const result = await sdk.inscribe(
           {
             file: {
               type: 'base64',
-              base64,
-              fileName: file.name,
+              base64: fileBase64,
+              fileName,
               mimeType: file.type,
             },
             holderId: state.accountId,
-            mode: 'file',
+            mode,
             network: NETWORK,
-            description: 'Inscribed via WalletConnect',
+            description:
+              mode === 'hashinal-collection'
+                ? 'Hashinal collection demo via WalletConnect'
+                : 'Inscribed via WalletConnect',
           },
           dAppSigner
         );
 
-        console.log('Inscription completed:', result);
-        updateStatus(`Inscription started! Job ID: ${result.jobId}`);
+        updateStatus(
+          `Inscription submitted. Transaction ID: ${result.transactionId}`
+        );
 
-        if (result.jobId) {
-          const status = await sdk.retrieveInscription(result.jobId);
-          updateStatus(`Inscription status: ${status.status}`);
-        }
+        const completion = await sdk.waitForInscription(
+          result.transactionId,
+          90,
+          2000,
+          true,
+          (data) => {
+            const percent = Math.round(data.progressPercent ?? 0);
+            updateStatus(`[${data.stage}] ${data.message} (${percent}%)`);
+          }
+        );
+
+        updateStatus(
+          `Completed: status=${completion.status}, completed=${completion.completed}`
+        );
       } catch (error) {
         updateStatus(
           error instanceof Error ? error.message : 'Inscription failed',
@@ -138,6 +227,15 @@ const handleInscribe = async () => {
     inscribeButton.disabled = false;
   }
 };
+
+modeSelect?.addEventListener('change', () => {
+  const mode = getSelectedMode();
+  updateStatus(
+    mode === 'hashinal-collection'
+      ? 'Mode: Hashinal Collection (will ZIP your selected image)'
+      : 'Mode: File (HCS-1)'
+  );
+});
 
 connectButton.addEventListener('click', handleConnect);
 fileInput.addEventListener('change', handleFileSelect);

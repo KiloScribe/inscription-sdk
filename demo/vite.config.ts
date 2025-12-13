@@ -1,18 +1,22 @@
 import { defineConfig } from 'vite';
 import { nodePolyfills } from 'vite-plugin-node-polyfills';
+import { fileURLToPath } from 'url';
+import { dirname, resolve } from 'path';
+
+const demoRoot = dirname(fileURLToPath(import.meta.url));
 
 export default defineConfig({
-    root: '.',
+    root: demoRoot,
     server: {
         port: 3000,
     },
     build: {
-        outDir: '../dist/demo',
+        outDir: resolve(demoRoot, '../dist/demo'),
         emptyOutDir: true,
     },
     plugins: [
         nodePolyfills({
-            include: ['buffer', 'process', 'util', 'stream'],
+            include: ['buffer', 'process', 'util', 'stream', 'crypto', 'path'],
             globals: {
                 Buffer: true,
                 global: true,

@@ -26,6 +26,7 @@ export default defineConfig(({ mode }) => {
     dts({
       insertTypesEntry: true,
       include: ['src/**/*.ts'],
+      exclude: ['src/**/__tests__/**', 'src/**/__mocks__/**'],
       outDir: outputDir,
     }),
     nodePolyfills(),

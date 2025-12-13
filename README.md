@@ -71,14 +71,14 @@ Before you start, you'll need:
 
 ```bash
 # Install the SDK and its peer dependencies
-npm install @kiloscribe/inscription-sdk @hashgraph/sdk
+npm install @kiloscribe/inscription-sdk @hashgraphonline/standards-sdk @hashgraph/sdk
 ```
 
 ### For Browser/Frontend Projects
 
 ```bash
 # Install the SDK and wallet connection dependencies
-npm install @kiloscribe/inscription-sdk @hashgraphonline/hashinal-wc @hashgraph/sdk @hashgraph/hedera-wallet-connect
+npm install @kiloscribe/inscription-sdk @hashgraphonline/standards-sdk @hashgraphonline/hashinal-wc @hashgraph/sdk @hashgraph/hedera-wallet-connect
 ```
 
 ## Getting Started
@@ -111,7 +111,7 @@ This method lets users connect their existing Hedera wallet (like HashPack):
 1. Install dependencies:
 
 ```bash
-npm install @kiloscribe/inscription-sdk @hashgraphonline/hashinal-wc @hashgraph/sdk
+npm install @kiloscribe/inscription-sdk @hashgraphonline/standards-sdk @hashgraphonline/hashinal-wc @hashgraph/sdk
 ```
 
 2. Create your app:

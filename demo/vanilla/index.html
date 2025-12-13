@@ -122,7 +122,7 @@
       // Initialize after HCS loads
       window.HCSReady = async () => {
         const hbarSDK = window.HashgraphSDK;
-        const ledger = hbarSDK.LedgerId.TESTNET;
+        const ledger = hbarSDK.LedgerId.MAINNET;
         const PROJECT_ID = 'bfd9ad3ea26e2c73eb21e8f9c750c166'; // Get from WalletConnect Dashboard
         const APP_METADATA = {
           name: 'Inscription SDK Demo',
@@ -162,7 +162,7 @@
             inscriptionSDK = new window.InscriptionSDK({
               apiKey:
                 'U2FsdGVkX1+tdUXOAXxJml1OLCGFWHVjgej4/pVHEpeL4FSm6MTRqnYNZwrFCYnJ24j+Ese9gcgoRtAI3qC8mA==', // Get from Kiloscribe Dashboard
-              network: 'testnet',
+              network: 'mainnet',
             });
           } else {
             connectBtn.style.display = 'block';

@@ -12056,12 +12056,14 @@ const _InscriptionSDK = class _InscriptionSDK {
       throw new ValidationError("Transaction ID is required");
     }
     try {
+      const formattedTransactionId = txId.includes("@") ? `${txId.split("@")[0]}-${txId.split("@")[1].replace(/\./g, "-")}` : txId;
       return await this.retryWithBackoff(async () => {
         const response = await this.client.get(
-          `/inscriptions/retrieve-inscription?id=${txId}`
+          `/inscriptions/retrieve-inscription?id=${formattedTransactionId}`
         );
         const result = response.data;
-        return { ...result, jobId: result.id };
+        const isCompleted = result.completed || result.status.toLowerCase() === "completed";
+        return { ...result, completed: isCompleted, jobId: result.id };
       });
     } catch (error) {
       this.logger.error("Failed to retrieve inscription:", error);
@@ -12153,37 +12155,50 @@ const _InscriptionSDK = class _InscriptionSDK {
         throw new Error(result.error);
       }
       let progressPercent = 5;
+      const isCompleted = result.completed || result.status.toLowerCase() === "completed";
       if (result.messages !== void 0 && result.maxMessages !== void 0 && result.maxMessages > 0) {
         progressPercent = Math.min(
           95,
           5 + result.messages / result.maxMessages * 90
         );
-        if (result.completed) {
+        if (isCompleted) {
           progressPercent = 100;
         }
       } else if (result.status === "processing") {
         progressPercent = 10;
-      } else if (result.completed) {
+      } else if (isCompleted) {
         progressPercent = 100;
       }
       reportProgress(
-        result.completed ? "completed" : "confirming",
-        result.completed ? "Inscription completed successfully" : `Processing inscription (${result.status})`,
+        isCompleted ? "completed" : "confirming",
+        isCompleted ? "Inscription completed successfully" : `Processing inscription (${result.status})`,
         progressPercent,
         {
           status: result.status,
           messagesProcessed: result.messages,
           maxMessages: result.maxMessages,
           messageCount: result.messages,
-          completed: result.completed,
+          completed: isCompleted,
           confirmedMessages: result.confirmedMessages,
           result
         }
       );
       const isHashinal = result.mode === "hashinal";
+      const isHashinalCollection = result.mode === "hashinal-collection";
       const isDynamic = ((_a2 = result.fileStandard) == null ? void 0 : _a2.toString()) === "6";
+      if (isHashinalCollection && isCompleted) {
+        if (!checkCompletion || isCompleted) {
+          reportProgress(
+            "completed",
+            "Inscription verification complete",
+            100,
+            { result }
+          );
+          return result;
+        }
+      }
       if (isHashinal && result.topic_id && result.jsonTopicId) {
-        if (!checkCompletion || result.completed) {
+        if (!checkCompletion || isCompleted) {
           reportProgress(
             "completed",
             "Inscription verification complete",
@@ -12194,7 +12209,7 @@ const _InscriptionSDK = class _InscriptionSDK {
         }
       }
       if (!isHashinal && !isDynamic && result.topic_id) {
-        if (!checkCompletion || result.completed) {
+        if (!checkCompletion || isCompleted) {
           reportProgress(
             "completed",
             "Inscription verification complete",
@@ -12205,7 +12220,7 @@ const _InscriptionSDK = class _InscriptionSDK {
         }
       }
       if (isDynamic && result.topic_id && result.jsonTopicId && result.registryTopicId) {
-        if (!checkCompletion || result.completed) {
+        if (!checkCompletion || isCompleted) {
           reportProgress(
             "completed",
             "Inscription verification complete",

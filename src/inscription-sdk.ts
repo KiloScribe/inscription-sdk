@@ -990,7 +990,9 @@ export class InscriptionSDK {
           `/inscriptions/retrieve-inscription?id=${formattedTransactionId}`
         );
         const result = response.data as ImageJobResponse;
-        return { ...result, jobId: result.id };
+        const isCompleted =
+          result.completed || result.status.toLowerCase() === 'completed';
+        return { ...result, completed: isCompleted, jobId: result.id };
       });
     } catch (error) {
       this.logger.error('Failed to retrieve inscription:', error);
@@ -1134,6 +1136,8 @@ export class InscriptionSDK {
       }
 
       let progressPercent = 5;
+      const isCompleted =
+        result.completed || result.status.toLowerCase() === 'completed';
 
       if (
         result.messages !== undefined &&
@@ -1145,18 +1149,18 @@ export class InscriptionSDK {
           5 + (result.messages / result.maxMessages) * 90
         );
 
-        if (result.completed) {
+        if (isCompleted) {
           progressPercent = 100;
         }
       } else if (result.status === 'processing') {
         progressPercent = 10;
-      } else if (result.completed) {
+      } else if (isCompleted) {
         progressPercent = 100;
       }
 
       reportProgress(
-        result.completed ? 'completed' : 'confirming',
-        result.completed
+        isCompleted ? 'completed' : 'confirming',
+        isCompleted
           ? 'Inscription completed successfully'
           : `Processing inscription (${result.status})`,
         progressPercent,
@@ -1165,17 +1169,30 @@ export class InscriptionSDK {
           messagesProcessed: result.messages,
           maxMessages: result.maxMessages,
           messageCount: result.messages,
-          completed: result.completed,
+          completed: isCompleted,
           confirmedMessages: result.confirmedMessages,
           result,
         }
       );
 
       const isHashinal = result.mode === 'hashinal';
+      const isHashinalCollection = result.mode === 'hashinal-collection';
       const isDynamic = result.fileStandard?.toString() === '6';
 
+      if (isHashinalCollection && isCompleted) {
+        if (!checkCompletion || isCompleted) {
+          reportProgress(
+            'completed',
+            'Inscription verification complete',
+            100,
+            { result }
+          );
+          return result;
+        }
+      }
+
       if (isHashinal && result.topic_id && result.jsonTopicId) {
-        if (!checkCompletion || result.completed) {
+        if (!checkCompletion || isCompleted) {
           reportProgress(
             'completed',
             'Inscription verification complete',
@@ -1187,7 +1204,7 @@ export class InscriptionSDK {
       }
 
       if (!isHashinal && !isDynamic && result.topic_id) {
-        if (!checkCompletion || result.completed) {
+        if (!checkCompletion || isCompleted) {
           reportProgress(
             'completed',
             'Inscription verification complete',
@@ -1204,7 +1221,7 @@ export class InscriptionSDK {
         result.jsonTopicId &&
         result.registryTopicId
       ) {
-        if (!checkCompletion || result.completed) {
+        if (!checkCompletion || isCompleted) {
           reportProgress(
             'completed',
             'Inscription verification complete',
