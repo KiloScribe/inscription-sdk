@@ -55,8 +55,9 @@ const createHashinalCollectionZipBase64 = async (
   const images = zip.folder('images');
   const metadata = zip.folder('metadata');
   const secondaryImages1 = zip.folder('secondary_images_1');
+  const secondaryImages2 = zip.folder('secondary_images_2');
 
-  if (!images || !metadata || !secondaryImages1) {
+  if (!images || !metadata || !secondaryImages1 || !secondaryImages2) {
     throw new Error('Failed to create collection ZIP folders');
   }
 
@@ -65,23 +66,41 @@ const createHashinalCollectionZipBase64 = async (
 
   images.file(`1.${extension}`, base64Image, { base64: true });
   images.file(`2.${extension}`, base64Image, { base64: true });
-  secondaryImages1.file(`1.${extension}`, base64Image, { base64: true });
-  secondaryImages1.file(`2.${extension}`, base64Image, { base64: true });
+  const pngBase64 =
+    'iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mP8/x8AAwMCAO6nq3UAAAAASUVORK5CYII=';
 
-  const baseMetadata = {
+  secondaryImages1.file('1.png', pngBase64, { base64: true });
+  secondaryImages1.file('2.png', pngBase64, { base64: true });
+
+  const mp4PlaceholderBytes = Uint8Array.from([
+    0x00, 0x00, 0x00, 0x18, 0x66, 0x74, 0x79, 0x70, 0x6d, 0x70, 0x34, 0x32,
+  ]);
+  secondaryImages2.file('1.mp4', mp4PlaceholderBytes);
+  secondaryImages2.file('2.mp4', mp4PlaceholderBytes);
+
+  const baseMetadata = (index: 1 | 2) => ({
     format: 'HIP412@2.0.0',
     type: imageFile.type || 'application/octet-stream',
     creator,
     image: '',
     attributes: [],
-    files: [],
-  };
+    files: [
+      {
+        uri: `secondary_images_1/${index}.png`,
+        type: 'image/png',
+      },
+      {
+        uri: `secondary_images_2/${index}.mp4`,
+        type: 'video/mp4',
+      },
+    ],
+  });
 
   metadata.file(
     '1.json',
     JSON.stringify(
       {
-        ...baseMetadata,
+        ...baseMetadata(1),
         name: 'Demo Collection #1',
         description: 'Demo Hashinal collection item #1',
       },
@@ -94,7 +113,7 @@ const createHashinalCollectionZipBase64 = async (
     '2.json',
     JSON.stringify(
       {
-        ...baseMetadata,
+        ...baseMetadata(2),
         name: 'Demo Collection #2',
         description: 'Demo Hashinal collection item #2',
       },
@@ -172,6 +191,8 @@ const handleInscribe = async () => {
           mode === 'hashinal-collection'
             ? await createHashinalCollectionZipBase64(base64, file, state.accountId)
             : base64;
+        const mimeType =
+          mode === 'hashinal-collection' ? 'application/zip' : file.type;
 
         const result = await sdk.inscribe(
           {
@@ -179,7 +200,7 @@ const handleInscribe = async () => {
               type: 'base64',
               base64: fileBase64,
               fileName,
-              mimeType: file.type,
+              mimeType,
             },
             holderId: state.accountId,
             mode,
