@@ -26,7 +26,6 @@ const config = {
   restoreMocks: true,
   moduleNameMapper: {
     '^@/(.*)$': '<rootDir>/src/$1',
-    '^@hashgraphonline/standards-sdk$': '<rootDir>/src/__mocks__/standards-sdk.ts',
     '^file-type$': '<rootDir>/src/__mocks__/file-type.ts',
   },
 };

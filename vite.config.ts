@@ -12,7 +12,6 @@ export default defineConfig(({ mode }) => {
   const externalDependencies = [
     '@hashgraph/proto',
     '@hashgraph/sdk',
-    '@hashgraphonline/standards-sdk',
     'fetch-retry',
   ];
 

@@ -18,10 +18,8 @@ import {
 } from './types';
 import { DAppSigner } from '@hashgraph/hedera-wallet-connect';
 import { Auth, AuthConfig, AuthResult } from './auth';
-import {
-  detectKeyTypeFromString,
-  HederaMirrorNode,
-} from '@hashgraphonline/standards-sdk';
+import { detectKeyTypeFromString } from './hedera/key-type-detector';
+import { HederaMirrorNode } from './hedera/mirror-node';
 import { ClientAuth } from './client-auth';
 import * as fileType from 'file-type';
 import { io, Socket } from 'socket.io-client';

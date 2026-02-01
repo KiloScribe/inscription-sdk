@@ -1,7 +1,7 @@
 import { PrivateKey } from '@hashgraph/sdk';
 import axios from 'axios';
 import { Buffer } from 'buffer';
-import { detectKeyTypeFromString } from '@hashgraphonline/standards-sdk';
+import { detectKeyTypeFromString } from './hedera/key-type-detector';
 
 export interface AuthConfig {
   accountId: string;

@@ -71,14 +71,14 @@ Before you start, you'll need:
 
 ```bash
 # Install the SDK and its peer dependencies
-npm install @kiloscribe/inscription-sdk @hashgraphonline/standards-sdk @hashgraph/sdk
+npm install @kiloscribe/inscription-sdk @hashgraph/sdk
 ```
 
 ### For Browser/Frontend Projects
 
 ```bash
 # Install the SDK and wallet connection dependencies
-npm install @kiloscribe/inscription-sdk @hashgraphonline/standards-sdk @hashgraphonline/hashinal-wc @hashgraph/sdk @hashgraph/hedera-wallet-connect
+npm install @kiloscribe/inscription-sdk @hashgraphonline/hashinal-wc @hashgraph/sdk @hashgraph/hedera-wallet-connect
 ```
 
 ## Getting Started
@@ -111,7 +111,7 @@ This method lets users connect their existing Hedera wallet (like HashPack):
 1. Install dependencies:
 
 ```bash
-npm install @kiloscribe/inscription-sdk @hashgraphonline/standards-sdk @hashgraphonline/hashinal-wc @hashgraph/sdk
+npm install @kiloscribe/inscription-sdk @hashgraphonline/hashinal-wc @hashgraph/sdk
 ```
 
 2. Create your app:
@@ -306,7 +306,7 @@ Load the SDK directly from the Hedera Hashgraph using HCS-3 recursion:
       window.HCSReady = async () => {
         const hbarSDK = window.HashgraphSDK;
         const ledger = hbarSDK.LedgerId.TESTNET;
-        const PROJECT_ID = 'bfd9ad3ea26e2c73eb21e8f9c750c166'; // Get from WalletConnect Dashboard
+        const PROJECT_ID = 'cedccf9f886f5d1f3b58f8e03a009118'; // Get from WalletConnect Dashboard
         const APP_METADATA = {
           name: 'Inscription SDK Demo',
           description: 'Demo app showing inscription creation and querying',

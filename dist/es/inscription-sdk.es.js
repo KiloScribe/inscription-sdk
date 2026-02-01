@@ -1,8 +1,7 @@
 var __defProp = Object.defineProperty;
 var __defNormalProp = (obj, key, value2) => key in obj ? __defProp(obj, key, { enumerable: true, configurable: true, writable: true, value: value2 }) : obj[key] = value2;
 var __publicField = (obj, key, value2) => __defNormalProp(obj, typeof key !== "symbol" ? key + "" : key, value2);
-import { Client, PrivateKey, TransferTransaction } from "@hashgraph/sdk";
-import { detectKeyTypeFromString, HederaMirrorNode } from "@hashgraphonline/standards-sdk";
+import { PrivateKey, Client, TransferTransaction } from "@hashgraph/sdk";
 var buffer = {};
 var base64Js = {};
 base64Js.byteLength = byteLength$1;
@@ -4375,6 +4374,23 @@ class ValidationError extends Error {
     this.name = "ValidationError";
   }
 }
+function detectKeyTypeFromString(privateKeyString) {
+  try {
+    const privateKey = PrivateKey.fromStringECDSA(privateKeyString);
+    return { detectedType: "ecdsa", privateKey };
+  } catch (ecdsaError) {
+    try {
+      const privateKey = PrivateKey.fromStringED25519(privateKeyString);
+      return { detectedType: "ed25519", privateKey };
+    } catch {
+      throw new Error(
+        `Failed to parse private key as either ECDSA or ED25519: ${String(
+          ecdsaError
+        )}`
+      );
+    }
+  }
+}
 class Auth {
   constructor(config) {
     __publicField(this, "accountId");
@@ -4430,6 +4446,21 @@ class Auth {
     const signatureBytes = await this.privateKey.sign(messageBytes);
     return Buffer$1.from(signatureBytes).toString("hex");
   }
+}
+class HederaMirrorNode {
+  constructor(network, baseUrl) {
+    __publicField(this, "baseUrl");
+    this.baseUrl = baseUrl ?? getDefaultMirrorNodeBaseUrl(network);
+  }
+  async requestAccount(accountId) {
+    const response = await axios.get(
+      `${this.baseUrl}/api/v1/accounts/${accountId}`
+    );
+    return response.data;
+  }
+}
+function getDefaultMirrorNodeBaseUrl(network) {
+  return network === "mainnet" ? "https://mainnet-public.mirrornode.hedera.com" : "https://testnet.mirrornode.hedera.com";
 }
 class ClientAuth {
   constructor(config) {
